@@ -32,6 +32,12 @@ namespace Puniemu.Src.Server.GameServer.Requests.GetMaster.Logic
             return UnmarshalCache[jsonName];
         }
 
+        private static object? TryDeserialize(string json)
+        {
+            try { return JsonConvert.DeserializeObject<object>(json); }
+            catch { return null; }
+        }
+
         public static async Task HandleAsync(HttpContext ctx)
         {
             ctx.Response.ContentType = "application/json";
@@ -74,12 +80,17 @@ namespace Puniemu.Src.Server.GameServer.Requests.GetMaster.Logic
                 //god knows, check back in like a month
                 if (DataManager.Logic.DataManager.GameDataManager!.GamedataCache.ContainsKey(tblName))
                 {
-                    var selectedJsonUnmarshalled = UnmarshalOrGetFromCache(tblName, DataManager.Logic.DataManager.GameDataManager.GamedataCache[tblName]);
+                    var rawTable = DataManager.Logic.DataManager.GameDataManager.GamedataCache[tblName];
+                    var served = await Puniemu.Src.Server.Events.EventManager.ServeAsync(tblName, rawTable, Puniemu.Src.Server.Infrastructure.RequestInfo.Gdkey(ctx));
+                    // Tables re-written for the event selection are per player, so they bypass the cache
+                    object selectedJsonUnmarshalled = ReferenceEquals(served, rawTable) || served == rawTable
+                        ? UnmarshalOrGetFromCache(tblName, rawTable)
+                        : (TryDeserialize(served) ?? served);
                     MasterDataJson[tblName] = selectedJsonUnmarshalled;
                 }
                 else
                 {
-                    Console.WriteLine("warn not foudn : " + tblName);
+                    Console.WriteLine("Table not found: " + tblName);
                 }
             }
             var outResponse = NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(MasterDataJson));

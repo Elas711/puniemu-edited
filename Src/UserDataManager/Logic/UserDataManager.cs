@@ -28,6 +28,7 @@ namespace Puniemu.Src.UserDataManager.Logic
 
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> _accountLocks = new();
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> _deviceLocks = new();
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _loadLocks = new();
 
         // Timer variables for background flushing
         private static PeriodicTimer? _flushTimer;
@@ -43,18 +44,51 @@ namespace Puniemu.Src.UserDataManager.Logic
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(DataManager.Logic.DataManager.PostgresConnectionString))
+                    throw new InvalidOperationException("'PostgresConnectionString' is missing from appsettings.json");
                 _dataSource = NpgsqlDataSource.Create(DataManager.Logic.DataManager.PostgresConnectionString!);
+                EnsureSchema();
 
                 _flushTimer = new PeriodicTimer(TimeSpan.FromSeconds(60));
                 _flushTask = FlushLoopAsync(_cts.Token);
                 Console.WriteLine("db service started");
             }
-            catch
+            catch (Exception ex)
             {
-                Console.WriteLine("Couldn't create postgres data source.");
+                Console.WriteLine($"Couldn't connect to PostgreSQL: {ex.Message}");
+                Console.WriteLine("Check 'PostgresConnectionString' in appsettings.json and that the database server is running.");
                 Environment.Exit(1);
             }
         }
+
+        // Creates the tables when they don't exist yet, so a fresh database works without running
+        // schema.sql by hand. Existing databases are left untouched.
+        private static void EnsureSchema()
+        {
+            using var cmd = _dataSource!.CreateCommand(@"
+create table if not exists public.account (
+  gdkey text primary key,
+  ywp_user_tables jsonb,
+  last_lgn_time text,
+  opening_tutorial_flag boolean,
+  start_date text,
+  character_id text unique,
+  user_id text unique,
+  udkey text
+);
+create table if not exists public.device (
+  udkey text primary key,
+  gdkeys text[] not null
+);
+create table if not exists public.mail (
+  mail text primary key,
+  ""currentUdkey"" text
+);");
+            cmd.ExecuteNonQuery();
+        }
+
+        // Accounts that were not touched for this long and have nothing left to save are dropped from the cache.
+        private static readonly TimeSpan CACHE_IDLE_EVICT = TimeSpan.FromMinutes(10);
 
         private static async Task FlushLoopAsync(CancellationToken token)
         {
@@ -80,7 +114,6 @@ namespace Puniemu.Src.UserDataManager.Logic
             await Parallel.ForEachAsync(_accountCache.Keys, async (gdkey, _) =>
             {
                 await FlushAccount(gdkey);
-                Console.WriteLine($"Saved account. gdkey:" + gdkey);
             });
         }
 
@@ -99,6 +132,7 @@ namespace Puniemu.Src.UserDataManager.Logic
                     try
                     {
                         await UpdateAccountNoLockAsync(account);
+                        Console.WriteLine($"Saved account. gdkey:" + gdkey);
                     }
                     catch (Exception ex)
                     {
@@ -106,8 +140,10 @@ namespace Puniemu.Src.UserDataManager.Logic
                         Console.WriteLine($"Failed to flush account {gdkey}: {ex.Message}");
                     }
                 }
-                else
+                else if (DateTime.UtcNow - account.LastAccessUtc > CACHE_IDLE_EVICT)
                 {
+                    // Only evict accounts nobody used recently, otherwise a handler still holding the
+                    // object would write into an instance that is no longer cached (and never saved).
                     _accountCache.TryRemove(gdkey, out _);
                 }
             }
@@ -124,12 +160,25 @@ namespace Puniemu.Src.UserDataManager.Logic
 
         public static async Task<Account> GetAccountFromGdkeyAsync(string gdkey)
         {
+            if (string.IsNullOrEmpty(gdkey)) return null!;
             if (_accountCache.TryGetValue(gdkey, out Account? acc))
             {
+                acc.LastAccessUtc = DateTime.UtcNow;
                 return acc;
             }
-            else
+
+            // Serialize loads of the same account so two concurrent requests can't each load
+            // their own copy (the loser's changes would otherwise be lost).
+            var loadLock = _loadLocks.GetOrAdd(gdkey, _ => new SemaphoreSlim(1, 1));
+            await loadLock.WaitAsync();
+            try
             {
+                if (_accountCache.TryGetValue(gdkey, out acc))
+                {
+                    acc.LastAccessUtc = DateTime.UtcNow;
+                    return acc;
+                }
+
                 ThrowIfCacheFull();
 
                 await using var cmd = _dataSource!.CreateCommand(
@@ -140,9 +189,15 @@ namespace Puniemu.Src.UserDataManager.Logic
                 if (await reader.ReadAsync())
                 {
                     account = ReadAccount(reader);
+                    account.YwpUserTables ??= new();
+                    account.LastAccessUtc = DateTime.UtcNow;
                     _accountCache[gdkey] = account;
                 }
                 return account!;
+            }
+            finally
+            {
+                loadLock.Release();
             }
         }
 
@@ -299,6 +354,7 @@ namespace Puniemu.Src.UserDataManager.Logic
 
         private static async Task RemoveGdkeyFromUdkey(string udkey, string gdkey)
         {
+            Puniemu.Src.Server.Infrastructure.GameRequestMiddleware.ForgetOwnership();
             var deviceLock = GetDeviceLock(udkey);
             await deviceLock.WaitAsync();
             try
@@ -319,7 +375,7 @@ namespace Puniemu.Src.UserDataManager.Logic
         public static async Task<T?> GetYwpUserAsync<T>(string gdkey, string tableId)
         {
             var account = await GetAccountFromGdkeyAsync(gdkey);
-            if (account == null) return default;
+            if (account == null || account.YwpUserTables == null) return default;
             if (!account.YwpUserTables.TryGetValue(tableId, out var tbl) || tbl == null)
                 return default;
             JToken token = JToken.FromObject(tbl);
@@ -351,8 +407,7 @@ namespace Puniemu.Src.UserDataManager.Logic
         }
         public static async Task<T?> GetYwpUserFromJson<T>(string tableId, Dictionary<string, object?> YwpUserTables, string? gdkey)
         {
-            var tbl = YwpUserTables[tableId];
-            if (tbl == null)
+            if (!YwpUserTables.TryGetValue(tableId, out var tbl) || tbl == null)
                 return default;
             JToken token = JToken.FromObject(tbl);
             var obj = token.ToObject<T>();
@@ -380,6 +435,7 @@ namespace Puniemu.Src.UserDataManager.Logic
 
         public static async Task TransferGdkeys(string udkeyFrom, string udkeyTo)
         {
+            Puniemu.Src.Server.Infrastructure.GameRequestMiddleware.ForgetOwnership();
             // Always take the locks in the same order to avoid deadlocks
             var firstKey = string.CompareOrdinal(udkeyFrom, udkeyTo) <= 0 ? udkeyFrom : udkeyTo;
             var secondKey = firstKey == udkeyFrom ? udkeyTo : udkeyFrom;
@@ -515,6 +571,87 @@ namespace Puniemu.Src.UserDataManager.Logic
                 deviceLock.Release();
             }
         }
+
+        // Gdkeys registered to a device (empty if the device doesn't exist).
+        public static async Task<List<string>> GetDeviceGdkeysPublicAsync(string udkey)
+        {
+            return await GetDeviceGdkeysAsync(udkey) ?? new List<string>();
+        }
+
+        // ---- Admin helpers -------------------------------------------------
+
+        public class AccountSummary
+        {
+            public string Gdkey { get; set; } = "";
+            public string? CharacterId { get; set; }
+            public string? UserId { get; set; }
+            public string? PlayerName { get; set; }
+            public string? LastLoginTime { get; set; }
+            public bool Online { get; set; }
+        }
+
+        // Searches accounts by friend code, user id, gdkey or player name.
+        public static async Task<List<AccountSummary>> SearchAccountsAsync(string query, int limit)
+        {
+            limit = Math.Clamp(limit, 1, 200);
+            await using var cmd = _dataSource!.CreateCommand(
+                "SELECT gdkey, character_id, user_id, last_lgn_time, ywp_user_tables->'ywp_user_data'->>'playerName' FROM account " +
+                "WHERE @q = '' OR gdkey = @q OR character_id ILIKE @like OR user_id = @q OR (ywp_user_tables->'ywp_user_data'->>'playerName') ILIKE @like " +
+                "ORDER BY last_lgn_time DESC NULLS LAST LIMIT @limit");
+            var q = (query ?? "").Trim();
+            cmd.Parameters.AddWithValue("q", q);
+            cmd.Parameters.AddWithValue("like", "%" + q.Replace("%", "\\%").Replace("_", "\\_") + "%");
+            cmd.Parameters.AddWithValue("limit", limit);
+            var list = new List<AccountSummary>();
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                list.Add(new AccountSummary
+                {
+                    Gdkey = reader.GetString(0),
+                    CharacterId = reader.IsDBNull(1) ? null : reader.GetString(1),
+                    UserId = reader.IsDBNull(2) ? null : reader.GetString(2),
+                    LastLoginTime = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    PlayerName = reader.IsDBNull(4) ? null : reader.GetString(4),
+                    Online = _accountCache.ContainsKey(reader.GetString(0))
+                });
+            }
+            // Names in the cache may be newer than the database copy.
+            foreach (var a in list)
+            {
+                if (_accountCache.TryGetValue(a.Gdkey, out var cached) && cached.YwpUserTables != null &&
+                    cached.YwpUserTables.TryGetValue("ywp_user_data", out var ud) && ud != null)
+                {
+                    try { a.PlayerName = JToken.FromObject(ud)["playerName"]?.ToString() ?? a.PlayerName; } catch { }
+                }
+            }
+            return list;
+        }
+
+        public static async Task<Dictionary<string, long>> GetStatsAsync()
+        {
+            var stats = new Dictionary<string, long>();
+            await using (var cmd = _dataSource!.CreateCommand("SELECT COUNT(*) FROM account"))
+                stats["accounts"] = (long)(await cmd.ExecuteScalarAsync())!;
+            await using (var cmd = _dataSource!.CreateCommand("SELECT COUNT(*) FROM device"))
+                stats["devices"] = (long)(await cmd.ExecuteScalarAsync())!;
+            stats["cachedAccounts"] = _accountCache.Count;
+            stats["dirtyAccounts"] = _accountCache.Values.Count(x => x.IsDirty);
+            return stats;
+        }
+
+        // Every gdkey in the database (used for server-wide gifts).
+        public static async Task<List<string>> GetAllGdkeysAsync()
+        {
+            var list = new List<string>();
+            await using var cmd = _dataSource!.CreateCommand("SELECT gdkey FROM account");
+            await using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync()) list.Add(reader.GetString(0));
+            return list;
+        }
+
+        // Forces every changed account to be written to the database now.
+        public static async Task FlushNowAsync() => await FlushAllDirtyAccountsAsync();
 
         // Writes the account back to the database immediately
         public static async Task UpdateAccountAsync(Account account)

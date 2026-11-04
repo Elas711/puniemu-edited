@@ -105,7 +105,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.MapWarp.Logic
             res.TeamEventButtonHiddenFlg = 1;
             var resdict = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(res))!;
 
-            // stocke la version corrigée dans resdict
+            // stocke la version corrigÃ©e dans resdict
             var ywpKeys = new List<string>
             {
                 "ywp_mst_event_condition",
@@ -127,7 +127,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.MapWarp.Logic
                 "ywp_mst_event"
             };
             List<Dictionary<string, object>> maps = new();
-            var raw = DataManager.Logic.DataManager.GameDataManager.GamedataCache["ywp_mst_map"]!;
+            var raw = await Puniemu.Src.Server.Events.EventManager.ServeAsync("ywp_mst_map", DataManager.Logic.DataManager.GameDataManager.GamedataCache["ywp_mst_map"]!, deserialized.Level5UserID);
             var dict = JsonConvert.DeserializeObject<Dictionary<string, object>>(raw)!;
             var data = (JArray)dict["data"]!;
             var maps_list = data.ToObject<List<Dictionary<string, object>>>()!;

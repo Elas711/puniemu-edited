@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Puniemu.Src.Server.GameServer.DataClasses;
 using Puniemu.Src.Server.GameServer.Requests.Map.Map.DataClasses;
@@ -24,9 +24,11 @@ namespace Puniemu.Src.Server.GameServer.Requests.Map.Map.Logic
             res.UserData = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<YwpUserData>(deserialized.Level5UserID, "ywp_user_data");
             res.YwpUserMap = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(deserialized.Level5UserID, "ywp_user_map");
             var mstMapDict = JsonConvert.DeserializeObject<Dictionary<string, object>>(
-                DataManager.Logic.DataManager.GameDataManager.GamedataCache["ywp_mst_map"]
+                await Puniemu.Src.Server.Events.EventManager.ServeAsync("ywp_mst_map", DataManager.Logic.DataManager.GameDataManager.GamedataCache["ywp_mst_map"], deserialized.Level5UserID)
             );
-            res.YwpMstMap = ((JArray)mstMapDict["data"]).ToObject<List<object>>(); res.YwpMstEvent = JsonConvert.DeserializeObject<List<object>>(DataManager.Logic.DataManager.GameDataManager.GamedataCache["ywp_mst_event"]);
+            res.YwpMstMap = ((JArray)mstMapDict!["data"]).ToObject<List<object>>();
+            res.YwpMstEvent = JsonConvert.DeserializeObject<List<object>>(
+                await Puniemu.Src.Server.Events.EventManager.ServeAsync("ywp_mst_event", DataManager.Logic.DataManager.GameDataManager.GamedataCache["ywp_mst_event"], deserialized.Level5UserID));
 
             var marshalledResponse = JsonConvert.SerializeObject(res);
             var encryptedResponse = NHNCrypt.Logic.NHNCrypt.EncryptResponse(marshalledResponse);

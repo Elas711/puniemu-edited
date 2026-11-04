@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Puniemu.Src.Server.GameServer.DataClasses;
 using Puniemu.Src.UserDataManager.Logic;
 
@@ -41,7 +41,8 @@ namespace Puniemu.Src.Server.GameServer.Requests.Init.InitGacha.DataClasses.WibW
         public static async Task<InitGachaResponse> ConstructAsync(string gdkey)
         {
             var res = new InitGachaResponse();
-            res.YwpMstGacha = JsonConvert.DeserializeObject<Dictionary<string, string>>(DataManager.Logic.DataManager.GameDataManager!.GamedataCache["ywp_mst_gacha"])!["tableData"];
+            var gachaTable = await Puniemu.Src.Server.Events.EventManager.ServeAsync("ywp_mst_gacha", DataManager.Logic.DataManager.GameDataManager!.GamedataCache["ywp_mst_gacha"], gdkey);
+            res.YwpMstGacha = JsonConvert.DeserializeObject<Dictionary<string, string>>(gachaTable)!["tableData"];
             res.YwpUserIconBudge = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(gdkey, "ywp_user_icon_budge");
             res.YwpUserGacha = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<List<WibWobUserGachaEntry>>(gdkey, "ywp_user_gacha");
             return res;

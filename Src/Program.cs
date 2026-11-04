@@ -1,4 +1,10 @@
 using Microsoft.AspNetCore.Rewrite;
+using Microsoft.AspNetCore.HttpOverrides;
+using Puniemu.Src.Server.Infrastructure;
+using Puniemu.Src.Server.Web;
+using Puniemu.Src.Server.Admin;
+using Puniemu.Src.Server.Events;
+using Puniemu.Src.Server.Translation;
 using Puniemu.Src.Server.GameServer.Requests.DefaultHandler.Logic;
 using Puniemu.Src.Server.GameServer.Requests.GetL5IDStatus.Logic;
 using Puniemu.Src.Server.GameServer.Requests.CreateUser.Logic;
@@ -72,7 +78,9 @@ class Program
         var builder = WebApplication.CreateBuilder(args);
 
         //Add the config to DataManager so it can be used globally
+        DataManager.Logic.DataManager.ContentRoot = builder.Environment.ContentRootPath;
         DataManager.Logic.DataManager.StaticInit(builder.Configuration);
+        GameRequestMiddleware.LogRequests = bool.TryParse(builder.Configuration["LogRequests"], out var logReq) && logReq;
 
         builder.WebHost.ConfigureKestrel(options =>
         {
@@ -80,6 +88,27 @@ class Program
         });
 
         var app = builder.Build();
+
+        PrintBanner();
+
+        //Runtime state (events, bans, rates, maintenance) edited from the admin panel
+        ServerStateStore.Load(DataManager.Logic.DataManager.ResolvePath(DataManager.Logic.DataManager.ServerStatePath));
+        //Optional English (or other) overlay for the game's master data
+        TranslationManager.Initialize();
+        //Build the event catalog from the loaded master data and Events/*.json packs
+        EventManager.Initialize();
+
+        if (DataManager.Logic.DataManager.TrustProxyHeaders)
+        {
+            var fwd = new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+            };
+            fwd.KnownNetworks.Clear();
+            fwd.KnownProxies.Clear();
+            app.UseForwardedHeaders(fwd);
+        }
+
         //Rewrite to redirect mainly all .NHN requests to .NHN/, as ASP.NET Core thinks it's static serving otherwise or something 
         //second rewrite is in case it's for example /////////////////////init.nhn it makes it /init.nhn
         var rewriteOptions = new RewriteOptions()
@@ -89,23 +118,12 @@ class Program
 
         app.UseRewriter(rewriteOptions);
 
-        //Refuse new players while the account cache is at capacity
-        app.Use(async (ctx, next) =>
-        {
-            try
-            {
-                await next();
-            }
-            catch (UserDataManager.Logic.UserDataManager.ServerFullException)
-            {
-                if (!ctx.Response.HasStarted)
-                {
-                    ctx.Response.StatusCode = 503;
-                    var serverFullMsg = new Src.Server.GameServer.DataClasses.MsgBoxResponse("The server is full.\nPlease try again later.", "Busy");
-                    await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(serverFullMsg)));
-                }
-            }
-        });
+        //Per-IP request rate limit
+        app.Use(RateLimiter.InvokeAsync);
+
+        //Buffers game requests, enforces bans/maintenance, serializes requests per save,
+        //refuses new players while the account cache is at capacity and turns crashes into dialogs
+        app.Use(GameRequestMiddleware.InvokeAsync);
 
         //Init database connection
         UserDataManager.Logic.UserDataManager.Initialize();
@@ -142,10 +160,15 @@ class Program
 
             await next();
         });
+
+        //Serve the game's data download (assets) and the in-game web pages from this server
+        StaticContent.Configure(app);
+
         //Assign handlers
         AssignCustomAuthHandlers(app);
         AssignL5IDHandlers(app);
         AssignGameServerHandlers(app);
+        AssignWebHandlers(app);
         AssignDefault(app);
         app.Run();
     }
@@ -191,8 +214,8 @@ class Program
         //Used as a bootstrap for custom auth
         app.MapGet("/help/inquiry/top.nhn", async ctx =>
         {
-            var html = await File.ReadAllTextAsync(
-                Path.Combine(app.Environment.ContentRootPath, "dataDownload/help.html"));
+            var helpPath = StaticContent.FindHelpPage();
+            var html = helpPath != null ? await File.ReadAllTextAsync(helpPath) : StaticContent.FallbackHelpPage;
 
             var userId = ctx.Request.Query["userId"].ToString();
             var appVer = ctx.Request.Query["appVer"].ToString();
@@ -208,7 +231,7 @@ class Program
         </script>
         """;
 
-            html = inject + html;
+            html = inject + html + StaticContent.PortalButton(userId);
 
             ctx.Response.ContentType = "text/html; charset=utf-8";
             await ctx.Response.WriteAsync(html);
@@ -448,6 +471,59 @@ class Program
         {
             await MapUnLockHandler.HandleAsync(ctx);
         });
+    }
+
+    //Pages and APIs that are not part of the original game protocol
+    static void AssignWebHandlers(WebApplication app)
+    {
+        //HSP launching info, requested by the client at boot (gets it past the maintenance screen)
+        app.MapGet("/hsp/lnc/getLaunchingInfos.json", LaunchingInfoHandler.HandleAsync);
+        app.MapGet("/hsp/getLaunchingInfos.json", LaunchingInfoHandler.HandleAsync);
+        app.MapMethods("/hsp", new[] { "GET", "POST" }, LaunchingInfoHandler.HandleAsync);
+        app.MapMethods("/hsp/{**rest}", new[] { "GET", "POST" }, LaunchingInfoHandler.HandleAsync);
+        app.MapMethods("/getLaunchingInfos", new[] { "GET", "POST" }, LaunchingInfoHandler.HandleAsync);
+
+        //In-game web views (notice pages)
+        app.MapGet("/web/noticeBannerPage.nhn", WebViewHandler.HandleNoticeBannerAsync);
+        app.MapGet("/web/viewpage.nhn", WebViewHandler.HandleViewPageAsync);
+
+        //Player portal: event selector & server info (opened from the in-game Help page)
+        app.MapGet("/web/portal.nhn", PlayerPortal.HandlePageAsync);
+        app.MapGet("/web/api/events", PlayerPortal.HandleGetEventsAsync);
+        app.MapPost("/web/api/events", PlayerPortal.HandleSetEventsAsync);
+
+        //Admin panel
+        AdminPanel.Map(app);
+
+        //Health checks
+        app.MapGet("/healthz", async ctx => await ctx.Response.WriteAsync("ok"));
+        app.MapGet("/status", async ctx =>
+        {
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.WriteAsync(JsonConvert.SerializeObject(new
+            {
+                server = DataManager.Logic.DataManager.ServerName,
+                version = DataManager.Logic.DataManager.GameVersion,
+                game = DataManager.Logic.DataManager.IsWibWob ? "Yo-kai Watch Wibble Wobble" : "Yo-kai Watch Puni Puni",
+                maintenance = ServerStateStore.Current.MaintenanceMode,
+                onlinePlayers = Metrics.ActivePlayers(),
+                uptimeSec = (long)(DateTime.UtcNow - Metrics.StartedAt).TotalSeconds,
+                tablesLoaded = DataManager.Logic.DataManager.GameDataManager.GamedataCache.Count
+            }));
+        });
+    }
+
+    static void PrintBanner()
+    {
+        var dm = DataManager.Logic.DataManager.GameDataManager;
+        Console.WriteLine("==============================================");
+        Console.WriteLine($" Puniemu - {DataManager.Logic.DataManager.ServerName}");
+        Console.WriteLine($" Game: {(DataManager.Logic.DataManager.IsWibWob ? "Wibble Wobble" : "Puni Puni")} {DataManager.Logic.DataManager.GameVersion}");
+        Console.WriteLine($" Game tables loaded: {dm.GamedataCache.Count}");
+        if (dm.GamedataCache.Count == 0)
+            Console.WriteLine(" WARNING: no game data found! Put the Resources folder next to Puniemu.csproj and rebuild.");
+        Console.WriteLine($" Admin panel: {(string.IsNullOrEmpty(DataManager.Logic.DataManager.AdminToken) ? "disabled (set AdminToken)" : "/admin")}");
+        Console.WriteLine("==============================================");
     }
 
     //Assigns all other, unknown request paths

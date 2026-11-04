@@ -32,5 +32,9 @@ namespace Puniemu.Src.UserDataManager.DataClasses
         [JsonIgnore]
         //used for the account cache
         public bool IsDirty { get; set; } = false;
+
+        [JsonIgnore]
+        //last time this account was read from the cache (used for idle eviction)
+        public DateTime LastAccessUtc { get; set; } = DateTime.UtcNow;
     }
 }

@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Linq.Expressions;
 
@@ -47,7 +47,8 @@ namespace Puniemu.Src.Utils.GeneralUtils
                 //Meaning it's constant
                 else if (DataManager.Logic.DataManager.GameDataManager!.GamedataCache.TryGetValue(table, out string outData)) 
                 {
-                    tableText = outData;
+                    // Apply the event selection (no-op unless events are switched)
+                    tableText = await Puniemu.Src.Server.Events.EventManager.ServeAsync(table, outData, string.IsNullOrEmpty(gdkey) ? null : gdkey);
                 }
                 else
                 {

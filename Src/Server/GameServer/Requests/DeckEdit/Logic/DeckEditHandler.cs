@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Puniemu.Src.Server.GameServer.DataClasses;
 using Puniemu.Src.Server.GameServer.Logic;
@@ -85,7 +85,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.DeckEdit.Logic
                     var gotten = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<object>(deserialized!.Gdkey!, table);
                     tableText = JsonConvert.SerializeObject(gotten);
                 }
-                else tableText = DataManager.Logic.DataManager.GameDataManager!.GamedataCache[table];
+                else tableText = await Puniemu.Src.Server.Events.EventManager.ServeAsync(table, DataManager.Logic.DataManager.GameDataManager!.GamedataCache[table], deserialized!.Gdkey);
                 //if we can't deserialize json it means it's not a json and we store it as is
                 object tableObj = new();
                 try
