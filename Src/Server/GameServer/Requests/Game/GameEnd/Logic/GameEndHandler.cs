@@ -426,6 +426,11 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEnd.Logic
             res.UserGameResultData.Score = deserialized.Score;
             res.UserGameResultData.Exp = Server.GameServer.Logic.MoneyExpManager.ScoreToExp(deserialized.Score); // credit : Flamer12344
             res.UserGameResultData.Money = Server.GameServer.Logic.MoneyExpManager.ScoreToMoney(deserialized.Score); // credit : Flamer12344
+            // Server rate multipliers (admin panel -> Settings)
+            var rates = Puniemu.Src.Server.Infrastructure.ServerStateStore.Current;
+            if (rates.ExpMultiplier != 1.0) res.UserGameResultData.Exp = (int)Math.Min(int.MaxValue, Math.Round(res.UserGameResultData.Exp * rates.ExpMultiplier));
+            if (rates.YMoneyMultiplier != 1.0) res.UserGameResultData.Money = (int)Math.Min(int.MaxValue, Math.Round(res.UserGameResultData.Money * rates.YMoneyMultiplier));
+            Puniemu.Src.Server.Infrastructure.Metrics.Incr("battles_finished");
 
 
             res.UserGameResultData.StageId = deserialized.StageId;

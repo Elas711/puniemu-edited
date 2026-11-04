@@ -13,6 +13,29 @@ namespace Puniemu.Src.Utils.GeneralUtils
             await ctx.Response.WriteAsync("Bad request");
         }
 
+        // Picks the save a request is about: the one the client named, if the device owns it,
+        // otherwise the device's first save.
+        public static string PickSave(List<string> gdkeys, string? preferred)
+        {
+            if (!string.IsNullOrEmpty(preferred) && gdkeys.Contains(preferred)) return preferred;
+            return gdkeys[0];
+        }
+
+        // Removes the characters that delimit NHN tables (| and *) and control characters from
+        // player supplied text, and caps its length.
+        public static string SanitizePlayerText(string? text, int maxLength = 24)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+            var sb = new System.Text.StringBuilder(text.Length);
+            foreach (var c in text)
+            {
+                if (c == '|' || c == '*' || char.IsControl(c)) continue;
+                sb.Append(c);
+            }
+            var s = sb.ToString().Trim();
+            return s.Length > maxLength ? s.Substring(0, maxLength) : s;
+        }
+
         public static T DeserializeGameDataToTypeAndCheckValidity<T>(string gamedataName)
         {
             T? output = JsonConvert.DeserializeObject<T>(DataManager.Logic.DataManager.GameDataManager!.GamedataCache[gamedataName]);

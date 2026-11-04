@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -18,7 +18,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.UpdateCrystalMenu.DataClasses
             inst._jo["shopSaleList"] = new JArray();
             inst._jo["ywpToken"] = "";
             inst._jo["ymoneyShopSaleList"] = new JArray();
-            inst._jo["mstVersionMaster"] = 16774;
+            inst._jo["mstVersionMaster"] = int.Parse(DataManager.Logic.DataManager.GameDataManager.GamedataCache["mstVersionMaster"]);
             inst._jo["resultCode"] = 0;
             inst._jo["ywp_user_icon_budge"] = "";
             inst._jo["nextScreenType"] = 0;
@@ -40,6 +40,20 @@ namespace Puniemu.Src.Server.GameServer.Requests.UpdateCrystalMenu.DataClasses
                 ["userId"] = request?.UserId ?? "0",
                 ["characterId"] = request?.Level5UserId ?? ""
             };
+
+            // Send the player's real data instead of the placeholder when the save is known
+            if (!string.IsNullOrEmpty(request?.Level5UserId))
+            {
+                try
+                {
+                    var real = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<JObject>(request.Level5UserId, "ywp_user_data");
+                    if (real != null) inst._jo["ywp_user_data"] = real;
+                }
+                catch
+                {
+                    // keep the placeholder
+                }
+            }
 
             // crystal menu
             var crystalMenu = new JArray();

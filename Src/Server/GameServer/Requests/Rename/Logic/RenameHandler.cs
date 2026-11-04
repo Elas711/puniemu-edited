@@ -25,7 +25,9 @@ namespace Puniemu.Src.Server.GameServer.Requests.Rename.Logic
 
             if (userData != null && !string.IsNullOrEmpty(deserialized.NewPlayerName))
             {
-                userData.PlayerName = deserialized.NewPlayerName;
+                // | and * are the save-table delimiters: a name containing them corrupts the save
+                var cleanName = Puniemu.Src.Utils.GeneralUtils.GeneralUtils.SanitizePlayerText(deserialized.NewPlayerName);
+                if (cleanName.Length > 0) userData.PlayerName = cleanName;
             }
             await GenerateFriendData.RefreshYwpUserFriend(deserialized.Level5UserID, -1,-1, userData!.PlayerName, -1, "");
             var renameResponse = new RenameResponse(userData!);

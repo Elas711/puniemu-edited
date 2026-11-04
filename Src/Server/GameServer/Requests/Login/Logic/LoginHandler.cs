@@ -34,7 +34,13 @@ namespace Puniemu.Src.Server.GameServer.Requests.Login.Logic
                 await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(deserialized.Gdkey, "ywp_user_addition", false);
             }
             await ShopLimitManager.CheckShopLimitReset(deserialized.Gdkey);
-            var mapsToAdd = JsonConvert.DeserializeObject<List<int>>(DataManager.Logic.DataManager.GameDataManager.GamedataCache["maps_to_add_login"]);
+            //Server-wide gifts created from the admin panel
+            var gifts = await Puniemu.Src.Server.Admin.GrantService.ClaimPendingGiftsAsync(deserialized.Gdkey!);
+            if (gifts.Count > 0) Puniemu.Src.Server.Infrastructure.Log.Info("gifts", $"{deserialized.Gdkey} received {gifts.Count} gift(s)");
+            Puniemu.Src.Server.Infrastructure.Metrics.Incr("logins");
+            var mapsToAdd = DataManager.Logic.DataManager.GameDataManager.GamedataCache.TryGetValue("maps_to_add_login", out var mapsRaw)
+                ? JsonConvert.DeserializeObject<List<int>>(mapsRaw) ?? new List<int>()
+                : new List<int>();
             var userMap = new TableParser<YwpUserMap>(await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(deserialized.Gdkey, "ywp_user_map"));
             foreach(var map in mapsToAdd)
             {
@@ -79,6 +85,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.Login.Logic
             resdict["ywp_user_map"] = userMap.ToString();
             //Set last login time to now
             acc.LastLoginTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            acc.IsDirty = true;
             var encryptedRes = NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(resdict));
             ctx.Response.Headers.ContentType = "application/json";
             await ctx.Response.WriteAsync(encryptedRes);

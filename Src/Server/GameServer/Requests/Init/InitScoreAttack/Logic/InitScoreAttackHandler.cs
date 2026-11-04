@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +20,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitScoreAttack.Logic
             var encRequest = System.Text.Encoding.UTF8.GetString(readResult.Buffer.ToArray());
             ctx.Request.BodyReader.AdvanceTo(readResult.Buffer.End);
             
-            // Décryptage de la requête
+            // Decrypt the request
             var requestJsonString = NHNCrypt.Logic.NHNCrypt.DecryptRequest(encRequest);
             var req = JsonConvert.DeserializeObject<InitScoreAttackRequest>(requestJsonString!);
 
@@ -39,16 +39,16 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitScoreAttack.Logic
             
             res.ResponseCode = 0;
             
-            // Charger les tables de base
+            // Load the base tables
             await GeneralUtils.AddTablesToResponse(tables, resdict!, false, req!.Level5UserId!);
             
             try
             {
-                // Calculer weekSeq basé sur la date actuelle
+                // Compute weekSeq from the current date
                 var currentWeek = GetCurrentWeekSeq();
                 resdict["weekSeq"] = currentWeek;
                 
-                // Déterminer la ligue du joueur (défaut: Bronze = 5)
+                // Determine the player's league (default: Bronze = 5)
                 var userLeague = await DetermineUserLeague(req.Level5UserId!);
                 resdict["leagueId"] = userLeague;
                 
@@ -57,7 +57,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitScoreAttack.Logic
             catch (Exception ex)
             {
                 Console.WriteLine($"[InitScoreAttack] Error processing for {req?.Level5UserId}: {ex}");
-                // Valeurs par défaut en cas d'erreur
+                // Default values on error
                 resdict["weekSeq"] = 202538;
                 resdict["leagueId"] = 5;
             }
@@ -67,20 +67,20 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitScoreAttack.Logic
             await ctx.Response.WriteAsync(encryptedResponse);
         }
 
-        // Calculer le numéro de semaine basé sur la date actuelle
+        // Compute the week number from the current date
         private static int GetCurrentWeekSeq()
         {
             try
             {
-                // Base: semaine du 1er janvier 2020 = 200001
+                // Base: week of January 1st 2020 = 200001
                 var baseDate = new DateTime(2020, 1, 1);
                 var currentDate = DateTime.UtcNow;
                 
-                // Calculer le nombre de semaines depuis la date de base
+                // Compute the number of weeks since the base date
                 var daysDiff = (currentDate - baseDate).Days;
                 var weeksDiff = daysDiff / 7;
                 
-                // Format: YYYYWW (année + numéro de semaine)
+                // Format: YYYYWW (year + week number)
                 var year = currentDate.Year;
                 var weekOfYear = (currentDate.DayOfYear - 1) / 7 + 1;
                 
@@ -88,24 +88,24 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitScoreAttack.Logic
             }
             catch
             {
-                // Valeur par défaut si le calcul échoue
+                // Default value if the computation fails
                 return 202538;
             }
         }
 
-        // Déterminer la ligue du joueur basé sur ses stats
+        // Determine the player's league from their stats
         private static async Task<int> DetermineUserLeague(string gdkey)
         {
             try
             {
-                // Récupérer les données utilisateur
+                // Load the user data
                 var userData = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<YwpUserData>(gdkey, "ywp_user_data");
-                if (userData == null) return 5; // Bronze par défaut
+                if (userData == null) return 5; // Bronze by default
                 
-                // Calculer le score total du joueur
+                // Compute the player's total score
                 var (totalStars, totalScore) = await ComputePlayerTotalScore(gdkey);
                 
-                // Logique de détermination de ligue basée sur le score/étoiles
+                // League selection based on score/stars
                 if (totalStars >= 1000 || totalScore >= 50000000) return 1; // Diamond
                 if (totalStars >= 800 || totalScore >= 30000000) return 2;  // Platinum  
                 if (totalStars >= 600 || totalScore >= 15000000) return 3;  // Gold
@@ -116,16 +116,16 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitScoreAttack.Logic
             catch (Exception ex)
             {
                 Console.WriteLine($"[DetermineUserLeague] Error for {gdkey}: {ex}");
-                return 5; // Bronze par défaut
+                return 5; // Bronze by default
             }
         }
 
-        // Calculer le score total du joueur
+        // Compute the player's total score
         private static async Task<(int totalStars, long totalScore)> ComputePlayerTotalScore(string gdkey)
         {
             try
             {
-                // Lire les données de stage
+                // Read the stage data
                 var stageRaw = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(gdkey, "ywp_user_stage");
                 if (string.IsNullOrEmpty(stageRaw))
                 {

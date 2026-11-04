@@ -70,7 +70,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.LoginStamp.Logic
             // change stamp if stamp finished
             foreach (string[] elements in LoginStamp.Table)
             {
-                if (int.Parse(elements[0]) == StampId && daysSinceEpoch2 > (long.Parse(LoginUserStampTable.Table[0][0]) + 8400) && (day + 1) > int.Parse(elements[2]))
+                if (int.Parse(elements[0]) == StampId && daysSinceEpoch2 > (long.Parse(LoginUserStampTable.Table[0][0]) + 86400) && (day + 1) > int.Parse(elements[2]))
                 {
                     StampId = random.Next(1, LoginStamLenght);
                     walk = 1;

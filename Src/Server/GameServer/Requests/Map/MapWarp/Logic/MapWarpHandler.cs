@@ -105,7 +105,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.MapWarp.Logic
             res.TeamEventButtonHiddenFlg = 1;
             var resdict = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(res))!;
 
-            // stocke la version corrigée dans resdict
+            // store the corrected version in resdict
             var ywpKeys = new List<string>
             {
                 "ywp_mst_event_condition",

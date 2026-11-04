@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -22,28 +22,28 @@ namespace Puniemu.Src.Server.GameServer.Requests.FriendDelete.Logic
             var encRequest = Encoding.UTF8.GetString(readResult.Buffer.ToArray());
             ctx.Request.BodyReader.AdvanceTo(readResult.Buffer.End);
 
-            // Décryptage comme dans les autres handlers
+            // Decrypt like in the other handlers
             var requestJsonString = NHNCrypt.Logic.NHNCrypt.DecryptRequest(encRequest);
             var deserialized = JsonConvert.DeserializeObject<FriendDeleteRequest>(requestJsonString!);
 
-            var res = new FriendDeleteResponse { ResponseCode = 1 }; // défaut = échec
+            var res = new FriendDeleteResponse { ResponseCode = 1 }; // default = failure
 
             if (deserialized == null || string.IsNullOrEmpty(deserialized.Level5UserID) || string.IsNullOrEmpty(deserialized.TargetUserId))
             {
-                // Requête invalide
+                // Invalid request
                 var outErr = NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(res));
                 await ctx.Response.WriteAsync(outErr);
                 return;
             }
 
-            // Récupère mes données (demandeur)
+            // Load my data (requester)
             var myData = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<YwpUserData>(
                 deserialized.Level5UserID, "ywp_user_data"
             );
 
             if (myData == null || string.IsNullOrEmpty(myData.UserID))
             {
-                // Impossible de retrouver le demandeur
+                // Could not find the requester
                 res.ResponseCode = 1;
                 var outErr = NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(res));
                 await ctx.Response.WriteAsync(outErr);
@@ -54,7 +54,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.FriendDelete.Logic
             string myGdkey = deserialized.Level5UserID;
             string targetUserId = deserialized.TargetUserId;
 
-            // Récupère le gdkey du joueur ciblé
+            // Look up the target player's gdkey
             string? targetGdkey = null;
             try
             {
@@ -65,36 +65,36 @@ namespace Puniemu.Src.Server.GameServer.Requests.FriendDelete.Logic
                 targetGdkey = null;
             }
 
-            // --- Suppression côté demandeur ---
+            // --- Removal on the requester's side ---
             var myFriends = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<List<FriendEntry>>(
                 myGdkey, "ywp_user_friend"
             ) ?? new List<FriendEntry>();
 
-            // retire targetUserId de ma liste d'amis
+            // remove targetUserId from my friend list
             myFriends.RemoveAll(f => f != null && f.UserId == targetUserId);
 
             await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(myGdkey, "ywp_user_friend", myFriends);
 
-            // Supprime aussi dans mes autres tables (rank / star_rank / request_recv)
+            // Also remove it from my other tables (rank / star_rank / request_recv)
             await RemoveFriendFromAllTables(myGdkey, targetUserId);
 
-            // --- Suppression côté cible (si on a son gdkey) ---
+            // --- Removal on the target's side (if we have their gdkey) ---
             if (!string.IsNullOrEmpty(targetGdkey))
             {
                 var targetFriends = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<List<FriendEntry>>(
                     targetGdkey, "ywp_user_friend"
                 ) ?? new List<FriendEntry>();
 
-                // retire mon UserID de sa liste d'amis (ATTENTION : on compare avec myData.UserID)
+                // remove my UserID from their friend list (NOTE: compared against myData.UserID)
                 targetFriends.RemoveAll(f => f != null && f.UserId == myUserId);
 
                 await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(targetGdkey, "ywp_user_friend", targetFriends);
 
-                // Supprime aussi dans ses autres tables
+                // Also remove it from their other tables
                 await RemoveFriendFromAllTables(targetGdkey, myUserId);
             }
 
-            // Recharger les tables mises à jour côté demandeur (pour la réponse)
+            // Reload the requester's updated tables (for the response)
             res.YwpUserData = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<YwpUserData>(myGdkey, "ywp_user_data");
             res.YwpUserFriend = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<List<FriendEntry>>(myGdkey, "ywp_user_friend") ?? new List<FriendEntry>();
             res.YwpUserFriendRank = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<List<FriendEntry>>(myGdkey, "ywp_user_friend_rank") ?? new List<FriendEntry>();
@@ -130,7 +130,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.FriendDelete.Logic
             recv.RemoveAll(f => f != null && f.UserId == removedUserId);
             await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(gdkey, "ywp_user_friend_request_recv", recv);
 
-            // Note: on ne supprime pas l'objet ywp_user_data lui-même.
+            // Note: the ywp_user_data object itself is not deleted.
         }
     }
 }

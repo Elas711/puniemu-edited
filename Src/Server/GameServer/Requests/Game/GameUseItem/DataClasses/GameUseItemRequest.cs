@@ -12,6 +12,10 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameUseItem.DataClasses
         [JsonProperty("deviceID")]
         public string DeviceID { get; set; }
 
+        // Enemy the item is used on (0 when not used on an enemy)
+        [JsonProperty("enemyId")]
+        public long EnemyId { get; set; }
+
         // Request id
         [JsonProperty("requestId")]
         public string? RequestID { get; set; }

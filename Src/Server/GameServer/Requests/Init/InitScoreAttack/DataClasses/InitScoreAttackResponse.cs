@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Puniemu.Src.Server.GameServer.DataClasses;
 
 namespace Puniemu.Src.Server.GameServer.Requests.InitScoreAttack.DataClasses
@@ -17,6 +17,6 @@ public class InitScoreAttackResponse : CommonResponse
         [JsonProperty("leagueId")]
         public int LeagueId { get; set; }
 
-        // Toutes les autres tables seront ajoutées dynamiquement via GeneralUtils
+        // All other tables are added dynamically through GeneralUtils
     }
 }

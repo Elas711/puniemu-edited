@@ -1,4 +1,4 @@
-﻿// (fichier: Requests/Friends/DataClasses/FriendsRequest.cs)
+// (file: Requests/Friends/DataClasses/FriendsRequest.cs)
 using Newtonsoft.Json;
 
 namespace Puniemu.Src.Server.GameServer.Requests.Friend.DataClasses

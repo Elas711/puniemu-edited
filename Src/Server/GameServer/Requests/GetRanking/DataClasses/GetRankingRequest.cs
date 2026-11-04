@@ -10,7 +10,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.GetRanking.DataClasses
         [JsonProperty("deviceId")]
         public string? DeviceId { get; set; }
 
-        // gdkey (level5 user id) -- correspond à "level5UserId" dans tes exemples
+        // gdkey (level5 user id) -- matches "level5UserId" in the requests
         [JsonProperty("level5UserId")]
         public string? Level5UserId { get; set; }
 

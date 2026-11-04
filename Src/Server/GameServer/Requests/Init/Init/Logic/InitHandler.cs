@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System.Buffers;
 using Puniemu.Src.Server.GameServer.DataClasses;
 using Puniemu.Src.Server.GameServer.Requests.Init.DataClasses;
@@ -49,7 +49,8 @@ namespace Puniemu.Src.Server.GameServer.Requests.Init.Logic
             if (dict.ContainsKey("appVer"))
             {
                 var appVer = dict["appVer"];
-                if ((string)appVer != DataManager.Logic.DataManager.GameVersion)
+                // StrictVersionCheck=false or AllowedGameVersions lets other client builds connect
+                if (!DataManager.Logic.DataManager.IsVersionAccepted(appVer?.ToString()))
                 {
                     //Display "Wrong version" message box in the client
                     var msg = new MsgBoxResponse("Game version is not\ncompatible with the server.", DataManager.Logic.DataManager.ServerName!);

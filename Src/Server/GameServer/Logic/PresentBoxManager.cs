@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Distributed;
 using Newtonsoft.Json;
 using Puniemu.Src.Server.GameServer.DataClasses;
 using Puniemu.Src.Server.GameServer.Requests.InitGacha.DataClasses;
@@ -20,7 +20,7 @@ namespace Puniemu.Src.Server.GameServer.Logic
             present.BodyText = bodyText!;
             if (bonus)
             {
-                present.BonusLimitMsg = "1 jour";
+                present.BonusLimitMsg = "1 day";
                 present.BonusYmoney = 10;
             }
             present.DistItemCnt = itemCnt;

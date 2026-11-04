@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace Puniemu.Src.Server.GameServer.Requests.UpdateCrystalMenu.DataClasses
 {
@@ -20,7 +20,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.UpdateCrystalMenu.DataClasses
         public int OsType { get; set; }
 
         [JsonProperty("crystalMenuId")]
-        public int? CrystalMenuId { get; set; }   // ✅ ajouté
+        public int? CrystalMenuId { get; set; }   // added
 
         [JsonProperty("token")]
         public string? Token { get; set; }

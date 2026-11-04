@@ -21,7 +21,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.GetRanking.Logic
             var readResult = await ctx.Request.BodyReader.ReadAsync();
             var encRequest = System.Text.Encoding.UTF8.GetString(readResult.Buffer.ToArray());
             ctx.Request.BodyReader.AdvanceTo(readResult.Buffer.End);
-            // Décryptage (même technique que tes autres handlers)
+            // Decrypt (same technique as the other handlers)
             var requestJsonString = NHNCrypt.Logic.NHNCrypt.DecryptRequest(encRequest);
             var req = JsonConvert.DeserializeObject<GetRankingRequest>(requestJsonString!);
             var res = new GetRankingResponse

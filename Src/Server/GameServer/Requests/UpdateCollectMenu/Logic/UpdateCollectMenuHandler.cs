@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Puniemu.Src.Server.GameServer.DataClasses;
 using Puniemu.Src.Server.GameServer.Requests.UpdateCollectMenu.DataClasses;
 using Puniemu.Src.Server.GameServer.Logic;
@@ -62,7 +62,8 @@ namespace Puniemu.Src.Server.GameServer.Requests.UpdateCollectMenu.Logic
                 YoukaiCollectRewardRes.AddRow(YoukaiCollectRewardMst.Table[idx]);
             }
             int[] YoukaiCollectEffectIdx = GetTableIndex.GetIndexs(YoukaiCollectEffectMst, new List<Tuple<int, string>> { Tuple.Create(0, deserialized.CollectId.ToString())});
-            foreach (var idx in YoukaiCollectRewardIdx)
+            // was iterating the reward indexes, which sent the wrong (or out of range) effect rows
+            foreach (var idx in YoukaiCollectEffectIdx)
             {
                 YoukaiCollectEffectRes.AddRow(YoukaiCollectEffectMst.Table[idx]);
             }

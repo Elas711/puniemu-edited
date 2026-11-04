@@ -210,7 +210,9 @@ namespace Puniemu.Src.Server.GameServer.Requests.Game.GameStart.Logic
                     bool befriendable = enemyMstYokai != null && enemyMstYokai.FoodType != 0;
                     
                     var yokaiId = int.Parse(enemyParams.Table[enemyParamsIdx][1]);
-                    var skillIdx = YoukaiManager.GetYoukaiSkillIndex(YwpUserYoukaiSkillTab, enemyId);
+                    // Look the soultimate up by Yo-kai id (it used to use the enemy id, so maxed
+                    // Yo-kai still got a befriend roll). Fix from the WibWobYT fork.
+                    var skillIdx = YoukaiManager.GetYoukaiSkillIndex(YwpUserYoukaiSkillTab, yokaiId);
 
                     //LB not implemented yet
 

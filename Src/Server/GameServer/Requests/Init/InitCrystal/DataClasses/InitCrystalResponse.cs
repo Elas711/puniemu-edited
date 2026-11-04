@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -15,19 +15,19 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitCrystal.DataClasses
         {
             var inst = new InitCrystalResponse();
             
-            // Créer la structure de base
+            // Create the base structure
             var jo = new JObject();
             
-            // Remplir les données master (statiques)
+            // Fill in the (static) master data
             await PopulateMasterData(jo);
             
-            // Mise à jour du timestamp
+            // Update the timestamp
             jo["serverDt"] = DateTimeOffset.Now.ToUnixTimeMilliseconds();
             
-            // Remplir ywp_user_data depuis Supabase
+            // Fill ywp_user_data from the database
             await PopulateUserData(jo, request);
             
-            // Initialiser les tables utilisateur d'event à vides
+            // Initialize the user event tables as empty
             InitializeUserEventTables(jo);
             
             inst._jo = jo;
@@ -36,14 +36,14 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitCrystal.DataClasses
 
         private static async Task PopulateMasterData(JObject jo)
         {
-            // Table master - données des menus Crystal
+            // Master table - Crystal menu data
             jo["ywp_mst_crystal_menu"] = CreateCrystalMenuMaster();
             
             // Autres champs statiques
             jo["shopSaleList"] = new JArray();
             jo["ywpToken"] = "";
             jo["ymoneyShopSaleList"] = new JArray();
-            jo["mstVersionMaster"] = 16774;
+            jo["mstVersionMaster"] = int.Parse(DataManager.Logic.DataManager.GameDataManager.GamedataCache["mstVersionMaster"]);
             jo["resultCode"] = 0;
             jo["ywp_user_icon_budge"] = "9000|5*5|1*2000|0*10|1*2007|1*2008|1*2009|1*2010|0*9004|21*9003|0*9007|0*9008|0*9009|0*10959|0*20959|0";
             jo["nextScreenType"] = 0;
@@ -57,7 +57,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitCrystal.DataClasses
 
         private static async Task PopulateUserData(JObject jo, InitCrystalRequest request)
         {
-            // Initialiser avec des données par défaut
+            // Initialize with default data
             jo["ywp_user_data"] = new JObject
             {
                 ["birthday"] = "",
@@ -93,7 +93,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitCrystal.DataClasses
                 ["equipWatchId"] = 10101
             };
 
-            // Tenter de récupérer les vraies données utilisateur depuis Supabase
+            // Try to load the real user data from the database
             try
             {
                 if (!string.IsNullOrEmpty(request?.DeviceId))
@@ -101,7 +101,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitCrystal.DataClasses
                     var gdkeys = await Puniemu.Src.UserDataManager.Logic.UserDataManager.GetGdkeysFromUdkeyAsync(request.DeviceId);
                     if (gdkeys != null && gdkeys.Count > 0)
                     {
-                        var tables = (await Puniemu.Src.UserDataManager.Logic.UserDataManager.GetEntireUserData(gdkeys[0]))!;
+                        var tables = (await Puniemu.Src.UserDataManager.Logic.UserDataManager.GetEntireUserData(Puniemu.Src.Utils.GeneralUtils.GeneralUtils.PickSave(gdkeys, request?.Level5UserId)))!;
                         if (tables != null && tables.ContainsKey("ywp_user_data"))
                         {
                             if (tables["ywp_user_data"] != null)
@@ -118,14 +118,14 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitCrystal.DataClasses
             }
             catch (Exception ex)
             {
-                // Log l'erreur si nécessaire mais continuer avec les données par défaut
-                Console.WriteLine($"Erreur lors de la récupération des données utilisateur: {ex.Message}");
+                // Log the error but continue with the default data
+                Console.WriteLine($"Error while loading the user data: {ex.Message}");
             }
         }
 
         private static void InitializeUserEventTables(JObject jo)
         {
-            // Tables utilisateur d'événement - initialisées vides pour un nouvel utilisateur
+            // User event tables - initialized empty for a new user
             jo["ywp_user_crystal_menu"] = new JArray();
         }
 
@@ -167,11 +167,11 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitCrystal.DataClasses
             long unixTime;
             int dayOfWeek;
             
-            // Pour les dates futures impossibles (comme 8099), on utilise une valeur hardcodée
+            // For impossible future dates (like 8099) a hardcoded value is used
             if (year >= 3000)
             {
-                unixTime = 253402268399000; // Valeur du JSON original pour 8099
-                dayOfWeek = 5; // Vendredi (valeur du JSON original)
+                unixTime = 253402268399000; // Value from the original JSON for 8099
+                dayOfWeek = 5; // Friday (value from the original JSON)
             }
             else
             {

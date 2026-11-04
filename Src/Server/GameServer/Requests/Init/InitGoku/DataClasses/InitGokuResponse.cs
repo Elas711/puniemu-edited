@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -57,7 +57,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.InitGoku.DataClasses
 
         private static void InitializeUserEventTables(JObject jo)
         {
-            // Tables utilisateur d'événement - initialisées vides pour un nouvel utilisateur
+            // User event tables - initialized empty for a new user
             jo["ywp_user_goku_story"] = new JArray();
             jo["ywp_user_goku_youkai_intro_release"] = new JArray();
         }

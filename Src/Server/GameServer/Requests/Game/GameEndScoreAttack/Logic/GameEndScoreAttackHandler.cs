@@ -31,7 +31,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEndScoreAttack.Logic
                 return;
             }
 
-            // Vérifier la session
+            // Check the session
             var reqId = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(deserialized.Level5UserId!, "ywp_user_requestid");
             if (reqId == null || deserialized.RequestId == null || reqId == "" || deserialized.RequestId == "" || reqId != deserialized.RequestId)
             {
@@ -49,7 +49,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEndScoreAttack.Logic
 
             var res = new GameEndScoreAttackResponse();
 
-            // Calculer les données de résultat du score attack
+            // Compute the score attack result data
             res.UserGameResultData.Score = deserialized.Score;
             res.UserGameResultData.Exp = Math.Min(deserialized.Score / 400, 500);
             res.UserGameResultData.Money = Math.Min(deserialized.Score / 2000, 100);
@@ -59,9 +59,13 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEndScoreAttack.Logic
 
             // Edit total best score
             var hist_total = new TableParser.Logic.TableParser(await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(deserialized.Level5UserId!, "ywp_user_hist_total"));
-            hist_total.Table[0][21] = "2025-09-18 01:16:35";
-            hist_total.Table[0][22] = "2258";
-            var total_bestScore = long.Parse(hist_total.Table[0][22]);
+            // The stored best used to be overwritten with a hardcoded value here, which reset the
+            // record every run. Only repair it when it is missing or not a number.
+            if (!long.TryParse(hist_total.Table[0][22], out var total_bestScore))
+            {
+                total_bestScore = 0;
+                hist_total.Table[0][22] = "0";
+            }
             bool isNewRecord = false;
             if (deserialized.Score > total_bestScore)
             {
@@ -74,7 +78,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEndScoreAttack.Logic
 
             // Edit weekly best score
             var hist_weekly = new TableParser.Logic.TableParser(await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(deserialized.Level5UserId!, "ywp_user_hist_puzzle_weekly"));
-            var weekly_bestScore = long.Parse(hist_weekly.Table[3][0]);
+            if (!long.TryParse(hist_weekly.Table[3][0], out var weekly_bestScore)) weekly_bestScore = 0;
             if (deserialized.Score > weekly_bestScore)
             {
                 hist_weekly.Table[3][0] = deserialized.Score.ToString();
@@ -88,20 +92,20 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEndScoreAttack.Logic
             try
             {
 
-                // Marquer qu'il y a un nouveau score à traiter pour GetRanking
+                // Flag that there is a new score for GetRanking to process
                 var pendingScore = new Dictionary<string, object>
                 {
                     ["score"] = deserialized.Score,
                     ["best_score"] = total_bestScore,
                     ["timestamp"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
                     ["is_new_record"] = isNewRecord,
-                    ["use_current_score"] = isNewRecord // Si c'est un nouveau record, on l'affiche dans le classement
+                    ["use_current_score"] = isNewRecord // If it is a new record, show it in the ranking
                 };
                 await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(deserialized.Level5UserId!, "ywp_pending_score", pendingScore);
 
-                // Mettre à jour res.UserGameResultData
+                // Update res.UserGameResultData
                 res.UserGameResultData.ScoreUpdateFlg = isNewRecord ? 1 : 0;
-                // Gestion des yokai utilisés (code existant)
+                // Handle the Yo-kai that were used (existing code)
 
 
                 var userYoukai = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(deserialized.Level5UserId!, "ywp_user_youkai");
@@ -126,18 +130,18 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEndScoreAttack.Logic
                             resultItem.IsMaxLevel = false;
                             resultItem.YoukaiId = yokaiResult.YoukaiId;
 
-                            // État avant
+                            // State before
                             resultItem.Before.Level = int.Parse(userYoukaiTable.Table[youkaiIdx][1]);
                             resultItem.Before.Exp = int.Parse(userYoukaiTable.Table[youkaiIdx][2]);
                             resultItem.Before.ExpBar.Denominator = int.Parse(userYoukaiTable.Table[youkaiIdx][5]);
                             resultItem.Before.ExpBar.Numerator = int.Parse(userYoukaiTable.Table[youkaiIdx][6]);
                             resultItem.Before.ExpBar.Percentage = int.Parse(userYoukaiTable.Table[youkaiIdx][7]);
 
-                            // Calculer l'exp gagnée basée sur les dégâts
+                            // Compute the exp earned from the damage dealt
                             var expGain = Math.Min(yokaiResult.DamageTotal / 10, 200);
                             resultItem.After.Exp = resultItem.Before.Exp + expGain;
 
-                            // Calculer le nouveau niveau et l'exp bar
+                            // Compute the new level and the exp bar
                             int newLevel = resultItem.Before.Level;
                             int index = 1;
                             bool levelFound = false;
@@ -179,13 +183,13 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEndScoreAttack.Logic
 
                             resultItem.After.Level = newLevel;
 
-                            // Vérifier si le niveau a changé
+                            // Check whether the level changed
                             if (resultItem.Before.Level != resultItem.After.Level)
                             {
-                                resultItem.HaveFlg = false; // Flag pour level up
+                                resultItem.HaveFlg = false; // Level up flag
                             }
 
-                            // Mettre à jour les données du yokai
+                            // Update the Yo-kai data
                             userYoukaiTable.Table[youkaiIdx][1] = resultItem.After.Level.ToString();
                             userYoukaiTable.Table[youkaiIdx][2] = resultItem.After.Exp.ToString();
                             userYoukaiTable.Table[youkaiIdx][5] = resultItem.After.ExpBar.Denominator.ToString();
@@ -197,15 +201,15 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEndScoreAttack.Logic
                     }
                 }
 
-                // Ajouter l'argent et l'exp à l'utilisateur
+                // Give the money and exp to the user
                 userData.YMoney += (int)res.UserGameResultData.Money;
 
-                // Nettoyer le requestId et sauvegarder les données
+                // Clear the requestId and save the data
                 await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(deserialized.Level5UserId!, "ywp_user_requestid", "");
                 await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(deserialized.Level5UserId!, "ywp_user_youkai", userYoukaiTable.ToString());
                 await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(deserialized.Level5UserId!, "ywp_user_data", userData);
 
-                // Nettoyer le compteur de continues pour ce score attack
+                // Reset the continue counter for this score attack
                 string scoreAttackKey = $"sa_continues_{deserialized.RequestId}";
                 try
                 {
@@ -213,7 +217,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEndScoreAttack.Logic
                 }
                 catch
                 {
-                    // Ignorer si la clé n'existe pas
+                    // Ignore if the key does not exist
                 }
 
                 var resDict = JsonConvert.DeserializeObject<Dictionary<string, object>>(JsonConvert.SerializeObject(res));
@@ -223,7 +227,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEndScoreAttack.Logic
                     return;
                 }
 
-                // Tables requises pour le score attack end
+                // Tables required for score attack end
                 List<string> tables = new()
                 {
                     "ywp_user_youkai",

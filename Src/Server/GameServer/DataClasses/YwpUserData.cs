@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using ManageData = Puniemu.Src.UserDataManager.Logic.UserDataManager;
 using Puniemu.Src.Server.GameServer.Requests.BuyHitodama.DataClasses;
 using System;
@@ -136,6 +136,18 @@ namespace Puniemu.Src.Server.GameServer.DataClasses
 
         public async Task HitodamaRecover(string gdkey)
         {
+            // "Infinite spirits" server setting (admin panel): keep the free spirits topped up
+            if (Puniemu.Src.Server.Infrastructure.ServerStateStore.Current.InfiniteSpirits)
+            {
+                const int MAX_FREE = 5;
+                if (this.Hitodama + this.FreeHitodama < MAX_FREE)
+                {
+                    this.FreeHitodama = MAX_FREE - this.Hitodama;
+                    await ManageData.SetYwpUserAsync(gdkey, "ywp_user_data", this);
+                }
+                this.HitodamaRecoverSec = 0;
+                return;
+            }
             DateTimeOffset result;
             DateTimeOffset now = DateTimeOffset.UtcNow;
             const string TIME_FORMAT = "yyyy-MM-dd HH:mm:ss zzz";

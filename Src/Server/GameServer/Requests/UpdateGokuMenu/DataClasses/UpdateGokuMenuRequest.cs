@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 
 namespace Puniemu.Src.Server.GameServer.Requests.UpdateGokuMenu.DataClasses
 {
@@ -10,7 +10,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.UpdateGokuMenu.DataClasses
         [JsonProperty("appVer")]
         public string? AppVer { get; set; }
 
-        // UDKey / device id envoyé par le client
+        // UDKey / device id sent by the client
         [JsonProperty("deviceId")]
         public string? DeviceId { get; set; }
 

@@ -23,8 +23,14 @@ namespace Puniemu.Src.Server.GameServer.Requests.SerialConfirm.Logic
             var deserialized = JsonConvert.DeserializeObject<SerialConfirmRequest>(requestJsonString!);
             ctx.Response.ContentType = "application/json";
 
+            if (AuthManager.IsLockedOut(deserialized!.DeviceId))
+            {
+                var lockRes = new MsgBoxResponse("Too many wrong codes.\nPlease try again in 15 minutes.", "Error");
+                await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(lockRes)));
+                return;
+            }
             int code = 0;
-            if (int.TryParse(deserialized.SerialCode.Trim(), out int number))
+            if (int.TryParse((deserialized.SerialCode ?? "").Trim(), out int number))
             {
                 code = number;
             }
@@ -34,7 +40,16 @@ namespace Puniemu.Src.Server.GameServer.Requests.SerialConfirm.Logic
                 await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(errRes)));
                 return;
             }
-            if (AuthManager.CodeCache.TryGetValue(code, out var val))
+            if (!AuthManager.CodeCache.TryGetValue(code, out var val) || DateTime.UtcNow > val.expires)
+            {
+                // Unknown or expired code: the old code sent no response at all here
+                if (AuthManager.CodeCache.ContainsKey(code)) AuthManager.CodeCache.TryRemove(code, out _);
+                AuthManager.RegisterFailure(deserialized.DeviceId);
+                var errRes = new MsgBoxResponse("This code is invalid or has expired.", "Error");
+                await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(errRes)));
+                return;
+            }
+            AuthManager.RegisterSuccess(deserialized.DeviceId);
             {
                 if (val.udkey != deserialized.DeviceId)
                 {
@@ -71,7 +86,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.SerialConfirm.Logic
                     }
                     await UserDataManager.Logic.UserDataManager.TransferGdkeys(oldUdkey, newUdkey);
                     await UserDataManager.Logic.UserDataManager.AddOrEditEmail(val.email, val.udkey);
-                    var res = new MsgBoxResponse("Connected to cloud save on this\ndevice.Please restart your game.", "Error");
+                    var res = new MsgBoxResponse("Connected to cloud save on this\ndevice. Please restart your game.", "Success");
                     await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(res)));
                     return;
                 }
