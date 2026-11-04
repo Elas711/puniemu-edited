@@ -171,7 +171,7 @@ namespace Puniemu.Src.Server.Infrastructure
                 if (LogRequests) Log.Info("request", $"{path} <- {decrypted}");
                 var jo = JObject.Parse(decrypted);
                 ctx.Items[RequestInfo.JSON] = jo;
-                ctx.Items[RequestInfo.GDKEY] = GetString(jo, "level5UserId") ?? GetString(jo, "gdkey");
+                ctx.Items[RequestInfo.GDKEY] = GetString(jo, "level5UserId") ?? GetString(jo, "gdkeyValue") ?? GetString(jo, "gdkey");
                 ctx.Items[RequestInfo.UDKEY] = GetString(jo, "deviceId") ?? GetString(jo, "udkey");
             }
             catch
