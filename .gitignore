@@ -423,3 +423,12 @@ Tools/sharedLogic/__pycache__
 /Tools/result.json
 /Tools/DumpOddsresult
 /Tools/ProveToNeon.py
+
+# Puniemu runtime files
+appsettings.json
+server_state.json
+server_state.json.tmp
+.env
+wwwroot/
+dataDownload/
+Translations/*/untranslated.json

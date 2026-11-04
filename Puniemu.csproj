@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -25,6 +25,13 @@
     
 	<ItemGroup>
 	  <Folder Include="Database\" />
+	</ItemGroup>
+
+	<!-- Runtime folders: in-game pages, event packs, translations and the DB schema -->
+	<ItemGroup>
+	  <Content Remove="Web\**;Events\**;Translations\**;appsettings.example.json" />
+	  <Content Include="Web\**\*.*;Events\**\*.*;Translations\**\*.*;Database\schema.sql" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+	  <None Include="appsettings.example.json" CopyToOutputDirectory="Never" />
 	</ItemGroup>
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 

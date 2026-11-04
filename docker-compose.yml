@@ -1,0 +1,50 @@
+# Quick start:
+#   cp .env.example .env    (set the passwords / tokens)
+#   docker compose up -d --build
+# Put your game files next to this file:
+#   ./Resources/            master data (ywp_mst_*.txt ...)
+#   ./wwwroot/dataDownload/ data download (assets) - optional
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-puniemu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-puniemu}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-puniemu} -d ${POSTGRES_DB:-puniemu}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  puniemu:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PUNIEMU_PORT:-8080}:8080"
+    environment:
+      PostgresConnectionString: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-puniemu};Username=${POSTGRES_USER:-puniemu};Password=${POSTGRES_PASSWORD}"
+      IsWibWob: "${IS_WIBWOB:-false}"
+      GameVersion: "${GAME_VERSION:-4.0.6}"
+      ServerName: "${SERVER_NAME:-Puniemu}"
+      PublicServerURL: "${PUBLIC_SERVER_URL:-}"
+      DataDownloadURL: "${DATA_DOWNLOAD_URL:-}"
+      AdminToken: "${ADMIN_TOKEN:-}"
+      Language: "${LANGUAGE:-}"
+      TrustProxyHeaders: "${TRUST_PROXY_HEADERS:-false}"
+    volumes:
+      - ./Resources:/app/Resources:ro
+      - ./wwwroot:/app/wwwroot:ro
+      - ./Events:/app/Events
+      - ./Translations:/app/Translations
+      - puniemu_state:/app/state
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  puniemu_state:

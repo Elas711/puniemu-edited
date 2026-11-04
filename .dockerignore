@@ -1,0 +1,13 @@
+bin/
+obj/
+.git/
+.vs/
+Resources/
+Resources.Puni/
+wwwroot/
+dataDownload/
+appsettings.json
+appsettings.Development.json
+server_state.json
+.env
+Tools/DataDownload
