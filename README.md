@@ -135,11 +135,19 @@ of the other events are closed. Normal story maps are never touched and `Resourc
 
 How to choose:
 
-* **Admin panel → Events**: "Original data" (as shipped) or "Custom" with a tick list.
+* **Admin panel → Events**: "Original data" (as shipped), "Custom" with a tick list, or
+  **"Rotation"** - the server cycles through the events by itself like the live game did
+  (e.g. 2 events at a time, changing every 7 days; uses the ticked events, or every playable one).
 * **In game**: open **Help** in the menu and tap the **Events & Server** button. Every player can
   pick their own events (can be disabled in the admin panel). Return to the title screen afterwards.
 
-See [Events/README.md](Events/README.md) for event packs and friendly names.
+The lists show each event's original dates and, when the data has them, the characters that appear
+in the event's story, to help recognise unnamed events. See [Events/README.md](Events/README.md) for
+event packs and friendly names (`Events/names.json`).
+
+**More past events:** drop older dumps' `ywp_mst_*` files (for example the event tables and
+`ywp_mst_map` of an older version) into `Resources/` or turn them into event packs - every event
+found in them is added to the catalog automatically.
 
 ### English translation
 
@@ -158,7 +166,7 @@ Set `AdminToken` and open `http://your-server:8080/admin`, enter the token.
 | Tab | What you can do |
 | --- | --- |
 | Overview | online players, accounts, uptime, memory, requests and errors per endpoint |
-| Players | search by name / friend code / user id / gdkey, give or take Y-Money, spirits, items, Yo-kai, ban / unban |
+| Players | search by name / friend code / user id / gdkey, give or take Y-Money, spirits, items, Yo-kai, rename, export / import a save (backup or move it to another account), ban / unban |
 | Events | the event switcher (see above) |
 | Gifts | server-wide gifts - every player receives them once on their next login |
 | Settings | Y-Money and EXP multipliers, infinite spirits, news text, maintenance mode, save all accounts now |

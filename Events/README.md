@@ -17,6 +17,15 @@ contains every event that ever existed. Puniemu builds its event list from:
 An event marked **no maps** in the list has some data (bonuses, rewards...) but no map, so turning it
 on may not give you anything to play until you add its maps with a pack.
 
+## Modes
+
+* **Original data** - nothing is changed.
+* **Custom** - only the ticked events are on.
+* **Rotation** - the server cycles through the events automatically: *N* events at once, changing
+  every *X* days. It uses the ticked events, or every playable event when none is ticked.
+
+Players can always override this for themselves in game (unless disabled).
+
 ## What switching does
 
 With an event selection active, the server rewrites what it sends to the client:

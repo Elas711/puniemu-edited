@@ -51,6 +51,7 @@ namespace Puniemu.Src.Server.Infrastructure
     {
         // "default": serve the master data exactly as shipped in Resources.
         // "custom":  serve only the events listed in ActiveEventIds (plus always-on events).
+        // "rotation": cycle automatically through the playable events (or the ActiveEventIds).
         [JsonProperty("mode")]
         public string Mode { get; set; } = "default";
 
@@ -68,6 +69,13 @@ namespace Puniemu.Src.Server.Infrastructure
         // How many days a re-activated event stays open (counted from "now" on every request).
         [JsonProperty("eventDurationDays")]
         public int EventDurationDays { get; set; } = 30;
+
+        // Rotation mode: how many days each slot lasts and how many events run at once.
+        [JsonProperty("rotationDays")]
+        public int RotationDays { get; set; } = 7;
+
+        [JsonProperty("rotationCount")]
+        public int RotationCount { get; set; } = 2;
     }
 
     // Everything an operator can change at runtime from the admin panel. Persisted to

@@ -42,6 +42,9 @@ pre{white-space:pre-wrap;font-size:12px;max-height:520px;overflow:auto;margin:0}
 <h2 style=""margin-top:14px"">Give / take</h2>
 <div class=""row""><label>Y-Money <input id=""gy"" type=""number"" value=""0"" style=""width:110px""></label><label>Spirits <input id=""gs"" type=""number"" value=""0"" style=""width:80px""></label></div>
 <div class=""row""><label>Items <input id=""gi"" placeholder=""itemId:count, itemId:count"" size=""32""></label><label>Yo-kai <input id=""gk"" placeholder=""youkaiId, youkaiId"" size=""26""></label><button class=""act"" id=""grant"">Apply</button></div>
+<h2 style=""margin-top:14px"">Save</h2>
+<div class=""row""><input id=""rname"" placeholder=""New player name"" size=""20""><button class=""ghost"" id=""rbtn"">Rename</button>
+<button class=""ghost"" id=""xbtn"">Export save</button><label class=""ghost"">Import save <input type=""file"" id=""ifile"" accept="".json""></label></div>
 <h2 style=""margin-top:14px"">Moderation</h2>
 <div class=""row""><input id=""breason"" placeholder=""Ban reason (shown to the player)"" style=""flex:1""><button class=""ghost"" id=""ban"">Ban</button><button class=""ghost"" id=""unban"">Unban</button></div>
 </div></section>
@@ -49,6 +52,9 @@ pre{white-space:pre-wrap;font-size:12px;max-height:520px;overflow:auto;margin:0}
 <section id=""t-events"" class=""hidden""><div class=""card""><h2>Event selection</h2>
 <div class=""row""><label><input type=""radio"" name=""emode"" value=""default""> Original data (serve the events exactly as in Resources)</label></div>
 <div class=""row""><label><input type=""radio"" name=""emode"" value=""custom""> Custom: only the events ticked below are on</label></div>
+<div class=""row""><label><input type=""radio"" name=""emode"" value=""rotation""> Rotation: automatically cycle through the events (the ticked ones, or all playable ones if none is ticked)</label>
+<label>change every <input id=""rdays"" type=""number"" min=""1"" style=""width:70px""> days,</label><label><input id=""rcount"" type=""number"" min=""1"" style=""width:60px""> at once</label></div>
+<p class=""muted"" id=""enow""></p>
 <div class=""row""><label><input type=""checkbox"" id=""eplayer""> Players may choose their own events (in-game Help &rarr; Events &amp; Server)</label></div>
 <div class=""row""><label><input type=""checkbox"" id=""ehide""> Close the maps of events that are not selected</label><label>Event length <input id=""edays"" type=""number"" min=""1"" style=""width:80px""> days</label></div>
 <div class=""row""><input id=""efilter"" placeholder=""Filter..."" style=""flex:1""><button class=""ghost"" id=""eall"">Select all</button><button class=""ghost"" id=""enone"">Clear</button><button class=""ghost"" id=""ereload"">Rescan data</button><button class=""act"" id=""esave"">Save</button></div>
@@ -98,7 +104,8 @@ function load(t){
   document.querySelectorAll('[data-del]').forEach(function(b){b.onclick=function(){api('POST','/admin/api/gifts/'+b.dataset.del+'/delete').then(function(){load('gifts');}).catch(fail);};});
  }).catch(fail);
  if(t==='events')api('GET','/admin/api/events').then(function(e){EV=e;var s=e.settings;document.querySelectorAll('[name=emode]').forEach(function(r){r.checked=r.value===s.mode;});
-  $('eplayer').checked=s.allowPlayerChoice;$('ehide').checked=s.hideInactiveEventMaps;$('edays').value=s.eventDurationDays;renderEvents();}).catch(fail);
+  $('eplayer').checked=s.allowPlayerChoice;$('ehide').checked=s.hideInactiveEventMaps;$('edays').value=s.eventDurationDays;$('rdays').value=s.rotationDays;$('rcount').value=s.rotationCount;
+  $('enow').textContent=e.runningNow?'Running now: '+e.runningNow.join(', '):'Running now: original data';renderEvents();}).catch(fail);
  if(t==='logs')api('GET','/admin/api/logs').then(function(l){$('logs').textContent=l.slice().reverse().join('\n');}).catch(fail);
 }
 function renderEvents(){var f=$('efilter').value.toLowerCase(),on={};EV.settings.activeEventIds.forEach(function(i){on[i]=1;});
@@ -111,7 +118,7 @@ $('eall').onclick=function(){EV.settings.activeEventIds=EV.catalog.filter(functi
 $('enone').onclick=function(){EV.settings.activeEventIds=[];renderEvents();};
 $('ereload').onclick=function(){api('POST','/admin/api/events/reload').then(function(){toast('Rescanned');load('events');}).catch(fail);};
 $('esave').onclick=function(){var mode='default';document.querySelectorAll('[name=emode]').forEach(function(r){if(r.checked)mode=r.value;});
- api('POST','/admin/api/events',{mode:mode,activeEventIds:EV.settings.activeEventIds,allowPlayerChoice:$('eplayer').checked,hideInactiveEventMaps:$('ehide').checked,eventDurationDays:+$('edays').value}).then(function(){toast('Event selection saved');}).catch(fail);};
+ api('POST','/admin/api/events',{mode:mode,activeEventIds:EV.settings.activeEventIds,allowPlayerChoice:$('eplayer').checked,hideInactiveEventMaps:$('ehide').checked,eventDurationDays:+$('edays').value,rotationDays:+$('rdays').value,rotationCount:+$('rcount').value}).then(function(){toast('Event selection saved');load('events');}).catch(fail);};
 $('psearch').onclick=function(){api('GET','/admin/api/players?q='+encodeURIComponent($('pq').value)).then(function(l){
  $('plist').innerHTML='<tr><th>Name</th><th>Friend code</th><th>User id</th><th>Last login</th><th></th></tr>'+l.map(function(p){return '<tr><td>'+esc(p.PlayerName||'(no name)')+' '+(p.Online?'<span class=""pill ok"">online</span>':'')+(p.banned?' <span class=""pill bad"">banned</span>':'')+
   '</td><td>'+esc(p.CharacterId)+'</td><td>'+esc(p.UserId)+'</td><td>'+esc(p.LastLoginTime)+'</td><td><button class=""ghost"" data-p=""'+esc(p.Gdkey)+'"">Open</button></td></tr>';}).join('');
@@ -122,6 +129,11 @@ function openPlayer(g){api('GET','/admin/api/player/'+encodeURIComponent(g)).the
   '<br>events: '+esc(p.eventChoice?p.eventChoice.mode+' '+p.eventChoice.ids.join(','):'server')+(p.ban?'<br><span class=""pill bad"">banned: '+esc(p.ban.reason)+'</span>':'');}).catch(fail);}
 $('grant').onclick=function(){api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/grant',{ymoney:+$('gy').value,spirits:+$('gs').value,items:parseItems($('gi').value),youkai:parseIds($('gk').value)})
  .then(function(r){toast('Applied'+(r.Notes&&r.Notes.length?' ('+r.Notes.join('; ')+')':''));openPlayer(CUR);}).catch(fail);};
+$('rbtn').onclick=function(){api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/rename',{name:$('rname').value}).then(function(){toast('Renamed');openPlayer(CUR);}).catch(fail);};
+$('xbtn').onclick=function(){api('GET','/admin/api/player/'+encodeURIComponent(CUR)+'/export').then(function(j){var a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([JSON.stringify(j)],{type:'application/json'}));a.download='save-'+(j.friendCode||'player')+'.json';a.click();}).catch(fail);};
+$('ifile').onchange=function(){var f=this.files[0];if(!f||!confirm('Replace this save with '+f.name+'? This cannot be undone.'))return;var r=new FileReader();
+ r.onload=function(){var j;try{j=JSON.parse(r.result);}catch(e){toast('Not a JSON file');return;}api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/import',j).then(function(){toast('Save imported');openPlayer(CUR);}).catch(fail);};r.readAsText(f);};
 $('ban').onclick=function(){api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/ban',{reason:$('breason').value}).then(function(){toast('Banned');openPlayer(CUR);}).catch(fail);};
 $('unban').onclick=function(){api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/unban').then(function(){toast('Unbanned');openPlayer(CUR);}).catch(fail);};
 $('fsend').onclick=function(){api('POST','/admin/api/gifts',{message:$('fm').value,ymoney:+$('fy').value,spirits:+$('fs').value,items:parseItems($('fi').value),youkai:parseIds($('fk').value)}).then(function(){toast('Gift created');load('gifts');}).catch(fail);};

@@ -45,6 +45,7 @@ namespace Puniemu.Src.Server.Infrastructure
         private static readonly TimeSpan LOCK_TIMEOUT = TimeSpan.FromSeconds(30);
         private static readonly ConcurrentDictionary<string, SemaphoreSlim> _saveLocks = new();
         private static readonly ConcurrentDictionary<string, byte> _verifiedOwnership = new();
+        private static readonly ConcurrentDictionary<string, byte> _reportedOwnership = new();
 
         public static bool LogRequests { get; set; } = false;
 
@@ -214,7 +215,8 @@ namespace Puniemu.Src.Server.Infrastructure
                 return true;
             }
 
-            Log.Warn("security", $"device {udkey} sent {path} for a save it does not own ({gdkey})");
+            if (_reportedOwnership.TryAdd(cacheKey, 0))
+                Log.Warn("security", $"device {udkey} sent {path} for a save it does not own ({gdkey})");
             return mode != "enforce";
         }
 

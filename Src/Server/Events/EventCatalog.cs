@@ -49,6 +49,9 @@ namespace Puniemu.Src.Server.Events
         public JObject? MstEventRow { get; set; }
 
         [JsonIgnore]
+        public List<string> Hints { get; set; } = new();
+
+        [JsonIgnore]
         public EventPack? Pack { get; set; }
     }
 

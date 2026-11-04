@@ -136,6 +136,17 @@ namespace Puniemu.Src.Server.Events
                             e.Tables.Add(kv.Key);
                             e.Sources.Add("found");
                             e.Selectable = true;
+                            // Original dates, so the lists can show when the event ran
+                            if (string.IsNullOrEmpty(e.Period))
+                            {
+                                var dates = rule.StartCols.Concat(rule.EndCols).Where(c => c < row.Length)
+                                    .Select(c => PrettyDate(row[c])).Where(d => d != null).ToList();
+                                if (dates.Count > 0) e.Period = rule.StartCols.Length > 0 && rule.EndCols.Length > 0 && dates.Count > 1
+                                    ? $"{dates[0]} ~ {dates[1]}" : (rule.EndCols.Length > 0 ? "until " : "from ") + dates[0];
+                            }
+                            // Characters that talk in the event's story: a good hint of what the event was
+                            if (kv.Key == "ywp_mst_event_tutorial_message" && row.Length > 6 && row[6].Trim().Any(char.IsLetterOrDigit) && e.Hints.Count < 4 && !e.Hints.Contains(row[6].Trim()))
+                                e.Hints.Add(row[6].Trim());
                         }
                     }
                 }
@@ -216,7 +227,12 @@ namespace Puniemu.Src.Server.Events
                 }
             }
 
-            foreach (var e in catalog.Values) e.MapIds = e.MapIds.Distinct().Where(x => x != 0).ToList();
+            foreach (var e in catalog.Values)
+            {
+                e.MapIds = e.MapIds.Distinct().Where(x => x != 0).ToList();
+                if (string.IsNullOrEmpty(e.Description) && e.Hints.Count > 0)
+                    e.Description = "Characters: " + string.Join(", ", e.Hints);
+            }
 
             lock (_catalogLock)
             {
@@ -232,6 +248,7 @@ namespace Puniemu.Src.Server.Events
         public static EventSelection GlobalSelection()
         {
             var s = ServerStateStore.Current.Events;
+            if (s.Mode == "rotation") return RotationSelection(s);
             if (s.Mode != "custom") return EventSelection.None;
             return new EventSelection
             {
@@ -240,6 +257,28 @@ namespace Puniemu.Src.Server.Events
                 HideInactiveMaps = s.HideInactiveEventMaps,
                 DurationDays = Math.Clamp(s.EventDurationDays, 1, 3650)
             };
+        }
+
+        // "rotation" mode: cycles through the playable events (or the ticked ones, if any) like the live
+        // game did. RotationCount events are on at once and change every RotationDays days.
+        private static EventSelection RotationSelection(EventSettings s)
+        {
+            var pool = (s.ActiveEventIds.Count > 0 ? s.ActiveEventIds
+                       : Catalog.Where(x => x.Selectable && x.Playable).Select(x => x.EventId)).OrderBy(x => x).ToList();
+            var sel = new EventSelection
+            {
+                Enabled = true,
+                HideInactiveMaps = s.HideInactiveEventMaps,
+                DurationDays = Math.Max(1, s.RotationDays)
+            };
+            if (pool.Count == 0) return sel;
+            var days = Math.Max(1, s.RotationDays);
+            var count = Math.Clamp(s.RotationCount, 1, pool.Count);
+            long slot = (long)Math.Floor((DateTime.Now - new DateTime(2020, 1, 1)).TotalDays) / days;
+            for (int i = 0; i < count; i++) sel.ActiveIds.Add(pool[(int)((slot * count + i) % pool.Count)]);
+            // Events end when the rotation slot ends, not "now + N days"
+            sel.DurationDays = (int)Math.Max(1, days - ((DateTime.Now - new DateTime(2020, 1, 1)).TotalDays % days));
+            return sel;
         }
 
         public static async Task<PlayerEventChoice?> GetPlayerChoiceAsync(string gdkey)
@@ -331,6 +370,7 @@ namespace Puniemu.Src.Server.Events
 
             if (table == EVENT_TABLE)
             {
+                if (!IsJsonRowTable(raw)) return raw; // never replace a table we can't read with an empty one
                 var rows = ReadJsonRows(raw, out var wrap);
                 var output = new JArray();
                 var present = new HashSet<long>();
@@ -372,6 +412,7 @@ namespace Puniemu.Src.Server.Events
 
             if (table == MAP_TABLE)
             {
+                if (!IsJsonRowTable(raw)) return raw; // never replace a table we can't read with an empty one
                 var rows = ReadJsonRows(raw, out var wrap);
                 var output = new JArray();
                 foreach (var row in rows)
@@ -499,6 +540,13 @@ namespace Puniemu.Src.Server.Events
             }
         }
 
+        private static string? PrettyDate(string v)
+        {
+            if (DATE_DASH.IsMatch(v)) return v.Substring(0, 10);
+            if (DATE_COMPACT.IsMatch(v)) return $"{v.Substring(0, 4)}-{v.Substring(4, 2)}-{v.Substring(6, 2)}";
+            return null;
+        }
+
         private static string ShiftDate(string original, DateTime target)
         {
             if (DATE_DASH.IsMatch(original)) return Format(target, "yyyy-MM-dd HH:mm:ss");
@@ -520,6 +568,19 @@ namespace Puniemu.Src.Server.Events
             catch
             {
                 return true;
+            }
+        }
+
+        private static bool IsJsonRowTable(string raw)
+        {
+            try
+            {
+                var tok = JToken.Parse(raw);
+                return tok is JArray || (tok is JObject o && o["data"] is JArray);
+            }
+            catch
+            {
+                return false;
             }
         }
 

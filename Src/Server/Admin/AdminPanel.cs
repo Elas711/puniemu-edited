@@ -135,10 +135,56 @@ namespace Puniemu.Src.Server.Admin
                 return new { ok = true };
             });
 
+            // Full save as JSON (backup / move a save to another account)
+            Api(app, "GET", "/admin/api/player/{gdkey}/export", async ctx =>
+            {
+                var gdkey = (string)ctx.Request.RouteValues["gdkey"]!;
+                var acc = await UDM.GetAccountFromGdkeyAsync(gdkey);
+                if (acc == null) throw new KeyNotFoundException("No such save");
+                ctx.Response.Headers["Content-Disposition"] = $"attachment; filename=save-{acc.CharacterId}.json";
+                return new { format = "puniemu-save-1", exported = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), friendCode = acc.CharacterId, tables = acc.YwpUserTables };
+            });
+
+            // Replaces the save's tables with an export. The friend code / ids of the target stay the same.
+            Api(app, "POST", "/admin/api/player/{gdkey}/import", async ctx =>
+            {
+                var gdkey = (string)ctx.Request.RouteValues["gdkey"]!;
+                var b = await ReadJson(ctx);
+                if (b.Value<string>("format") != "puniemu-save-1" || b["tables"] is not JObject tables)
+                    throw new InvalidOperationException("Not a Puniemu save export");
+                var acc = await UDM.GetAccountFromGdkeyAsync(gdkey);
+                if (acc == null) throw new KeyNotFoundException("No such save");
+                var dict = tables.ToObject<Dictionary<string, object?>>()!;
+                // Keep the target's own identity inside ywp_user_data
+                if (acc.YwpUserTables != null && acc.YwpUserTables.TryGetValue("ywp_user_data", out var oldUd) && oldUd != null && dict.TryGetValue("ywp_user_data", out var newUd) && newUd != null)
+                {
+                    var o = JObject.FromObject(oldUd); var n = JObject.FromObject(newUd);
+                    foreach (var k in new[] { "userId", "characterId" }) if (o[k] != null) n[k] = o[k];
+                    dict["ywp_user_data"] = n;
+                }
+                await UDM.SetEntireUserData(gdkey, dict);
+                Log.Info("admin", $"imported a save into {gdkey}");
+                return new { ok = true, tables = dict.Count };
+            });
+
+            Api(app, "POST", "/admin/api/player/{gdkey}/rename", async ctx =>
+            {
+                var gdkey = (string)ctx.Request.RouteValues["gdkey"]!;
+                var b = await ReadJson(ctx);
+                var name = Puniemu.Src.Utils.GeneralUtils.GeneralUtils.SanitizePlayerText(b.Value<string>("name"));
+                if (name.Length == 0) throw new InvalidOperationException("Empty name");
+                var ud = await UDM.GetYwpUserAsync<YwpUserData>(gdkey, "ywp_user_data") ?? throw new KeyNotFoundException("No player data");
+                ud.PlayerName = name;
+                await UDM.SetYwpUserAsync(gdkey, "ywp_user_data", ud);
+                await Puniemu.Src.Server.GameServer.Logic.GenerateFriendData.RefreshYwpUserFriend(gdkey, -1, -1, name, -1, "");
+                return new { ok = true, name };
+            });
+
             Api(app, "GET", "/admin/api/events", async ctx =>
             {
                 await Task.CompletedTask;
-                return new { settings = ServerStateStore.Current.Events, catalog = EventManager.Catalog };
+                var now = EventManager.GlobalSelection();
+                return new { settings = ServerStateStore.Current.Events, runningNow = now.Enabled ? now.ActiveIds.ToList() : null, catalog = EventManager.Catalog };
             });
 
             Api(app, "POST", "/admin/api/events", async ctx =>
@@ -147,7 +193,13 @@ namespace Puniemu.Src.Server.Admin
                 ServerStateStore.Update(s =>
                 {
                     var e = s.Events;
-                    if (b["mode"] != null) e.Mode = b.Value<string>("mode") == "custom" ? "custom" : "default";
+                    if (b["mode"] != null)
+                    {
+                        var m = b.Value<string>("mode");
+                        e.Mode = m == "custom" || m == "rotation" ? m! : "default";
+                    }
+                    if (b["rotationDays"] != null) e.RotationDays = Math.Clamp(b.Value<int>("rotationDays"), 1, 365);
+                    if (b["rotationCount"] != null) e.RotationCount = Math.Clamp(b.Value<int>("rotationCount"), 1, 100);
                     if (b["activeEventIds"] is JArray ids) e.ActiveEventIds = ids.Select(x => x.Value<long>()).Distinct().ToList();
                     if (b["allowPlayerChoice"] != null) e.AllowPlayerChoice = b.Value<bool>("allowPlayerChoice");
                     if (b["hideInactiveEventMaps"] != null) e.HideInactiveEventMaps = b.Value<bool>("hideInactiveEventMaps");

@@ -40,7 +40,8 @@ namespace Puniemu.Src.Server.Web
             var gdkey = await ResolveGdkeyAsync(ctx.Request.Query["userId"]);
             var s = ServerStateStore.Current.Events;
             PlayerEventChoice? choice = gdkey != null ? await EventManager.GetPlayerChoiceAsync(gdkey) : null;
-            var serverIds = s.Mode == "custom" ? s.ActiveEventIds : EventManager.Catalog.Where(x => x.Selectable && x.Sources.Contains("master")).Select(x => x.EventId).ToList();
+            var global = EventManager.GlobalSelection();
+            var serverIds = global.Enabled ? global.ActiveIds.ToList() : EventManager.Catalog.Where(x => x.Selectable && x.Sources.Contains("master")).Select(x => x.EventId).ToList();
             ctx.Response.ContentType = "application/json";
             await ctx.Response.WriteAsync(JsonConvert.SerializeObject(new
             {
@@ -168,7 +169,7 @@ function render(){
 }
 function load(){req('GET','/web/api/events?userId='+encodeURIComponent(USER_ID),null,function(st,j){
   if(!j){$('list').innerHTML='Could not load events.';return;} data=j; if(!data.choice.ids)data.choice.ids=[];
-  $('serverInfo').innerHTML='('+(j.serverMode==='custom'?j.serverActive.length+' selected by the server':'original event data')+')';
+  $('serverInfo').innerHTML='('+(j.serverMode==='custom'?j.serverActive.length+' selected by the server':j.serverMode==='rotation'?'rotating: '+j.serverActive.length+' event(s) this week':'original event data')+')';
   if(!j.allowPlayerChoice){$('choiceCard').innerHTML='<h2>Events</h2><p class=""muted"">The server owner chooses the events on this server.</p>';$('save').disabled=true;}
   else if(!j.known){$('msg').innerHTML='Open this page from the in-game <b>Help</b> menu to save your choice.';}
   var r=document.getElementsByName('mode');for(var i=0;i<r.length;i++){r[i].checked=(r[i].value===(j.choice.mode||'server'));r[i].onchange=render;}
