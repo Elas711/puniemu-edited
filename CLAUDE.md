@@ -57,7 +57,13 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
 * Treat downloaded files as untrusted: parse as data, never execute; Python with `-I`.
 * Commit to the session branch with clear messages; no PR unless asked.
 
+## Done recently
+* Balance mode (`Src/Server/Balance`): BalanceStrength 0-1, owned Yo-kai synced at login,
+  MasterVersions raises mstVersionMaster once per content change (master_version.json).
+
 ## Open work (keep this list current; take the top item)
+0. Balance ideas: optional skill power balance (ywp_mst_youkai_skill_level), show BalanceStrength in
+   the admin panel and wiki, per-rank preview table.
 1. Endpoints whose layout is in `docs/PROTOCOL.md` but not implemented: `updateEventTutorialFlg`
    (store `ywp_user_event_tutorial`), `recvEventReward(All)`, `getEventRanking`, `gameStartEvent` /
    `gameEndEvent` / `gameContinueEvent`, `gameContinueScoreAttack`, `resultScoreAttack`,
