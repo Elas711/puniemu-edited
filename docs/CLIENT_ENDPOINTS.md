@@ -1,7 +1,7 @@
 # Puni Puni 4.177.0 client endpoints
 
 Every `.nhn` endpoint the 4.177.0 Android client (`libSGF.so`) can call, and whether Puniemu answers it.
-Puniemu implements **53** of the **164**; **11** fire-and-forget calls get a plain success answer.
+Puniemu implements **55** of the **164**; **11** fire-and-forget calls get a plain success answer.
 Every other unknown request is recorded with its decrypted body (admin panel -> Logs -> Unimplemented requests):
 play on your server, then use those samples to implement the endpoint.
 
@@ -22,7 +22,7 @@ Legend: **yes** implemented, *ok* acknowledged (success answer, nothing stored),
 | `gameStartEvent.nhn` |  |
 | `getBingoEventInfo.nhn` |  |
 | `getEventCondition.nhn` |  |
-| `getEventMaster.nhn` |  |
+| `getEventMaster.nhn` | **yes** |
 | `getEventMessage.nhn` |  |
 | `getEventPointTrade.nhn` |  |
 | `getEventQuest.nhn` |  |
@@ -97,7 +97,7 @@ Legend: **yes** implemented, *ok* acknowledged (success answer, nothing stored),
 | `getPresentBox.nhn` | **yes** |
 | `medalPointTrade.nhn` |  |
 | `missionReward.nhn` | **yes** |
-| `missionRewardAll.nhn` |  |
+| `missionRewardAll.nhn` | **yes** |
 | `onedariFriendList.nhn` |  |
 | `onedariHitodama.nhn` |  |
 | `presentHitodama.nhn` |  |
