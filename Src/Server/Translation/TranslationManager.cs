@@ -188,7 +188,11 @@ namespace Puniemu.Src.Server.Translation
                 try
                 {
                     var newText = TranslateTableText(raw, ref translated, ref remaining);
-                    if (!ReferenceEquals(newText, raw)) cache[key] = newText;
+                    if (!ReferenceEquals(newText, raw) && newText != raw)
+                    {
+                        cache[key] = newText;
+                        Balance.MasterVersions.MarkChanged(cache, key);
+                    }
                 }
                 catch (Exception ex)
                 {
