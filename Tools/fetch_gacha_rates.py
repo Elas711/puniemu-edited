@@ -73,6 +73,8 @@ def main():
     ap.add_argument("--merge", action="store_true", help="keep the other pools already in --out")
     ap.add_argument("--pages", default=None, help="folder to save the fetched pages in (or to read them from)")
     ap.add_argument("--offline", action="store_true", help="only use the pages already in --pages")
+    ap.add_argument("--html", help="folder of saved odds pages of any name (news archives, client web caches); "
+                                   "matched to machines by the coin / machine name in the page")
     args = ap.parse_args()
 
     youkai, rank = {}, {}
@@ -88,10 +90,16 @@ def main():
     for r in table(args.resources, "ywp_mst_coin_purchase_master"):
         if len(r) > 13 and r[13].startswith("GASHA") and r[8].isdigit():
             coin_page.setdefault(r[13], set()).add(r[8])
-    machines = {}
+    machines, by_name = {}, {}
     for r in table(args.resources, "ywp_mst_gacha"):
         if len(r) > 4 and r[0].isdigit():
             machines.setdefault(r[4], []).append(int(r[0]))
+            if len(r) > 14 and r[14]:
+                by_name.setdefault(norm(r[14]), []).append(int(r[0]))
+    item_ids = {}
+    for r in table(args.resources, "ywp_mst_item"):
+        if len(r) > 2 and r[0].isdigit():
+            item_ids.setdefault(norm(r[2]), []).append(r[0])
 
     pools = {}
     if args.merge and os.path.exists(args.out):
@@ -100,10 +108,21 @@ def main():
     if args.pages:
         os.makedirs(args.pages, exist_ok=True)
 
-    found, unknown = 0, set()
+    sources = []  # (label, coins or None, page html or None)
     for wid, coins in sorted(coin_page.items()):
-        cache = os.path.join(args.pages, wid + ".html") if args.pages else None
-        if cache and os.path.exists(cache):
+        sources.append((wid, coins, None))
+    if args.html:
+        for f in sorted(os.listdir(args.html)):
+            raw = open(os.path.join(args.html, f), encoding="utf-8", errors="ignore").read()
+            if "の通りです" in raw:
+                sources.append((f, None, raw))
+    found, unknown = 0, set()
+    live_done = set()
+    for wid, coins, saved in sources:
+        cache = os.path.join(args.pages, wid + ".html") if args.pages and saved is None else None
+        if saved is not None:
+            raw = saved
+        elif cache and os.path.exists(cache):
             raw = open(cache, encoding="utf-8", errors="ignore").read()
         elif args.offline:
             continue
@@ -142,10 +161,32 @@ def main():
         if n == 0:
             print(f"{wid}: no Yo-kai found on the page")
             continue
-        targets = [m for c in coins for m in machines.get(c, [])]
+        if coins is not None:
+            targets = [m for c in coins for m in machines.get(c, [])]
+        else:
+            # "<coin>でまわす<machine>の なかみ": the coin item, else the machine's name
+            head = page_text(raw).split("のなかみ", 1)[0].split("の なかみ", 1)[0][-80:]
+            coin, _, machine = head.rpartition("でまわす")
+            coin = re.split(r"[、,]", coin)[-1].strip()
+            targets = []
+            if coin and norm(coin) in item_ids and norm(coin) not in ("Yポイント", "直接購入"):
+                targets = [m for i in item_ids[norm(coin)] for m in machines.get(i, [])]
+            # names shared by many machines ("直接購入ガシャ", "妖怪ガシャ") say nothing about which one
+            name = norm(machine.strip())
+            if not targets and name and len(by_name.get(name, [])) <= 2 and name not in ("妖怪ガシャ", "直接購入ガシャ"):
+                targets = by_name.get(name, [])
+            # pages read from the live server this run are newer than saved ones
+            targets = [m for m in targets if m not in live_done]
+            if not targets:
+                print(f"{wid}: no machine for '{head.strip()[-40:]}' in this data")
+                continue
+        if not targets:
+            continue
         for m in targets:
             p = dict(pool, gachaId=m)
             pools[str(m)] = p
+            if saved is None:
+                live_done.add(m)
         found += 1
         print(f"{wid}: {n} Yo-kai, {len(entries) - n} other entries -> machines {targets}", flush=True)
 
