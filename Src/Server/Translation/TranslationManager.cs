@@ -97,15 +97,22 @@ namespace Puniemu.Src.Server.Translation
                 var flat = text.Replace("\r", "").Replace("\n", "");
                 if (flat != text && _exact.TryGetValue(flat, out hit)) result = hit;
             }
+            // Full-width letters / digits ("ＢＧダイヤニャン", "ステージ１２") are matched in their normal form
+            if (result == text)
+            {
+                var nfkc = text.Normalize(System.Text.NormalizationForm.FormKC);
+                if (nfkc != text && _exact.TryGetValue(nfkc, out var nhit)) result = nhit;
+            }
             if (_patterns.Count > 0 && JAPANESE.IsMatch(result))
             {
+                var matchText = result == text ? text.Normalize(System.Text.NormalizationForm.FormKC) : result;
                 foreach (var p in _patterns)
                 {
                     try
                     {
                         // Captured parts are translated too ("ボスステージ13のジバニャンを倒そう")
                         // ignore line breaks and the <R>..</R> highlight tags when matching
-                        var m = p.Key.Match(HIGHLIGHT.Replace(result.Replace("\r", "").Replace("\n", ""), ""));
+                        var m = p.Key.Match(HIGHLIGHT.Replace(matchText.Replace("\r", "").Replace("\n", ""), ""));
                         if (!m.Success) continue;
                         var repl = p.Value;
                         for (int g = m.Groups.Count - 1; g >= 1; g--)
