@@ -125,6 +125,7 @@ namespace Puniemu.Src.DataManager.Logic
             AdminToken = config["AdminToken"];
             Language = (config["Language"] ?? "").Trim().ToLowerInvariant();
             TranslationsPath = GetString(config, "TranslationsPath", TranslationsPath);
+            Puniemu.Src.Server.Translation.TranslationManager.RomajiFallback = GetBool(config, "RomajiFallback", true);
             EventsPath = GetString(config, "EventsPath", EventsPath);
             WebPath = GetString(config, "WebPath", WebPath);
             AssetOverlayPath = GetString(config, "AssetOverlayPath", AssetOverlayPath);

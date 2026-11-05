@@ -31,6 +31,40 @@ python Tools/build_translation.py extract --jp Resources --translations Translat
 python Tools/build_translation.py stats --jp Resources --translations Translations/en
 ```
 
+## Translating everything that is left (machine translation)
+
+Whatever no dictionary covers can be machine-translated offline, so every text in the game is English:
+
+1. Admin panel -> **Settings** -> **Download untranslated texts** (or
+   `GET /admin/api/translation/untranslated` with the `X-Admin-Token` header). The file lists every text
+   that is still Japanese, most frequent first, as a dictionary with empty values.
+2. Download a CTranslate2 Japanese -> English model, for example
+   * [Sugoi v4](https://huggingface.co/entai2965/sugoi-v4-ja-en-ctranslate2) - trained on game / anime
+     dialogue, clearly the best for this game. NTT licence: non-commercial / research use only.
+   * [FuguMT ja-en](https://huggingface.co/shift-ykurami/fugumt-ja-en-ct2-f32) - CC BY-SA 4.0.
+   * [Argos Translate ja_en](https://argos-net.com/v1/translate-ja_en-1_1.argosmodel) - MIT (unzip it), weakest.
+3. Run the tool (`pip install ctranslate2 sentencepiece`, CPU only, no GPU needed):
+
+   ```
+   python Tools/machine_translate.py --input untranslated.json --model sugoi-v4-ja-en-ctranslate2 \
+          --translations Translations/en --out Translations/en/machine.generated.json
+   ```
+
+   Before translating it puts in the English names it already knows (every dictionary in
+   `Translations/en` plus the game terms in `Tools/translation_glossary.json`, e.g. いりょく -> Power,
+   わざゲージ -> Soultimate gauge), so Yo-kai and game words come out right. Dialogue keeps its pages
+   (▽), line breaks are redone to fit the text boxes, `<USERNAME>` placeholders and `<R>` highlights
+   are kept, and texts that only differ in their numbers are translated once. It can be stopped and
+   continues where it stopped. About 26,000 texts take 10-20 minutes on a normal CPU.
+4. Restart the server. `machine*.json` files are loaded first, so every other dictionary overrides
+   them: to fix a bad machine translation, put the corrected text in any other file.
+
+Two automatic fallbacks need no tool at all:
+
+* katakana names nobody translated are written in romaji (`ナツネ` -> `Natsune`); turn it off with
+  `"RomajiFallback": false`,
+* kana reading columns (`じばにゃん`, used for sorting) are recognised and left alone.
+
 `|` and `*` are table separators and are removed from translations automatically.
 Files shipped in `Translations/en/`:
 
@@ -38,7 +72,8 @@ Files shipped in `Translations/en/`:
 * `names.fandom.json` - about 3,900 Japanese -> English Yo-kai / character / item names from the
   [Yo-kai Watch Fandom wiki](https://yokaiwatch.fandom.com) (CC BY-SA 3.0). Refresh it with
   `python Tools/fetch_fandom_names.py --out Translations/en/names.fandom.json`,
-* `patterns.json` - rules for numbered texts: stage names, star conditions, missions...
+* `patterns.json` - rules for numbered texts: stage names, star conditions, missions, crank-a-kai
+  stamp bonuses...
 
 Files are loaded in alphabetical order and later files win, so a `strings.generated.json` built
 from the official Wibble Wobble text overrides the Fandom names where both exist.

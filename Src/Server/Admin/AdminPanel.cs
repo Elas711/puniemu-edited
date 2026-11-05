@@ -42,7 +42,9 @@ namespace Puniemu.Src.Server.Admin
                     language = DataManager.Logic.DataManager.Language,
                     entries = TranslationManager.LoadedEntries,
                     translated = TranslationManager.TranslatedCells,
-                    remaining = TranslationManager.RemainingJapaneseCells
+                    remaining = TranslationManager.RemainingJapaneseCells,
+                    romaji = TranslationManager.RomajiCells,
+                    untranslatedDistinct = TranslationManager.Untranslated.Count
                 },
                 events = new { total = EventManager.Catalog.Count, switchable = EventManager.Catalog.Count(x => x.Selectable) },
                 state = ServerStateStore.Current
@@ -304,6 +306,15 @@ namespace Puniemu.Src.Server.Admin
             {
                 await UDM.FlushNowAsync();
                 return new { ok = true };
+            });
+
+            // Every text that is still Japanese, as a dictionary file to translate (see Translations/README.md)
+            app.MapGet("/admin/api/translation/untranslated", async ctx =>
+            {
+                if (!Authorized(ctx)) { ctx.Response.StatusCode = 401; return; }
+                ctx.Response.ContentType = "application/json; charset=utf-8";
+                ctx.Response.Headers["Content-Disposition"] = "attachment; filename=untranslated.json";
+                await ctx.Response.WriteAsync(TranslationManager.ExportUntranslatedJson());
             });
 
             Api(app, "GET", "/admin/api/logs", async ctx =>

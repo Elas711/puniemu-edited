@@ -169,8 +169,10 @@ files are only parsed as data, never executed.
 Set `"Language": "en"`. Every JSON dictionary in `Translations/en/` is applied to the game data
 before it is sent (exact text matches, optional phrase replacements). The tool
 `Tools/build_translation.py` builds a complete dictionary by lining up the Japanese Puni Puni tables
-with the English Wibble Wobble tables (same ids), and can export everything that is still Japanese
-for manual translation. See [Translations/README.md](Translations/README.md).
+with the English Wibble Wobble tables (same ids). Everything that is left can be exported from the
+admin panel and machine-translated offline with `Tools/machine_translate.py` (a local
+Japanese -> English model, it keeps Yo-kai names, line breaks and placeholders), so the whole game
+is English; untranslated katakana names fall back to romaji. See [Translations/README.md](Translations/README.md).
 
 **Translated images and sounds (works on Android too):** the
 [YWP-Translation](https://github.com/Lit8tech/YWP-Translation) project made English versions of
@@ -319,6 +321,7 @@ All keys are optional except `PostgresConnectionString` and `IsWibWob`.
 | `DataDownloadPath` | `wwwroot/dataDownload` | asset folder served under `/dataDownload` |
 | `AdminToken` | `""` | enables the admin panel |
 | `Language` | `""` | `en` = translate the game data with `Translations/en` |
+| `RomajiFallback` | `true` | write untranslated katakana names in romaji |
 | `TranslationsPath` / `EventsPath` / `WebPath` / `AssetOverlayPath` | `Translations` / `Events` / `Web` / `AssetOverlay` | folders |
 | `ServerStatePath` | `server_state.json` | runtime settings file |
 | `AccountOwnershipMode` | `log` | `off`, `log` or `enforce` |

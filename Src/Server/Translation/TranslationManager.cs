@@ -23,10 +23,19 @@ namespace Puniemu.Src.Server.Translation
         private static List<KeyValuePair<string, string>> _phrases = new();
         private static List<KeyValuePair<Regex, string>> _patterns = new();
         [ThreadStatic] private static int _patternDepth;
+        // Texts that are still Japanese after translation (text -> how often it occurs), for the export.
+        private static Dictionary<string, int> _untranslated = new();
+        [ThreadStatic] private static Dictionary<string, int>? _collect;
+        private static int _romaji;
+        public static IReadOnlyDictionary<string, int> Untranslated => _untranslated;
 
         public static int LoadedEntries => _exact.Count + _phrases.Count + _patterns.Count;
         public static int TranslatedCells { get; private set; }
         public static int RemainingJapaneseCells { get; private set; }
+        public static int RomajiCells { get; private set; }
+        // Katakana names nobody translated are written in romaji (RomajiFallback, on by default)
+        public static bool RomajiFallback { get; set; } = true;
+        [ThreadStatic] private static bool _usedFallback;
         public static bool Enabled => !string.IsNullOrEmpty(DataManager.Logic.DataManager.Language);
 
         public static void Initialize()
@@ -43,7 +52,11 @@ namespace Puniemu.Src.Server.Translation
             var exact = new Dictionary<string, string>();
             var phrases = new Dictionary<string, string>();
             var patterns = new List<KeyValuePair<Regex, string>>();
-            foreach (var file in Directory.EnumerateFiles(dir, "*.json").OrderBy(x => x))
+            // Files are applied in alphabetical order, later files win. Machine translations
+            // (machine*.json, see Tools/machine_translate.py) come first so any real translation beats them.
+            foreach (var file in Directory.EnumerateFiles(dir, "*.json")
+                         .OrderBy(x => Path.GetFileName(x).StartsWith("machine", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+                         .ThenBy(x => x, StringComparer.Ordinal))
             {
                 try
                 {
@@ -76,7 +89,7 @@ namespace Puniemu.Src.Server.Translation
             _patterns = patterns;
 
             ApplyToGameData();
-            Log.Info("translation", $"Language '{lang}': {exact.Count} strings + {phrases.Count} phrases + {patterns.Count} patterns loaded, {TranslatedCells} texts translated, {RemainingJapaneseCells} still Japanese.");
+            Log.Info("translation", $"Language '{lang}': {exact.Count} strings + {phrases.Count} phrases + {patterns.Count} patterns loaded, {TranslatedCells} texts translated ({RomajiCells} of them as romaji names), {RemainingJapaneseCells} still Japanese.");
         }
 
         // The table format uses | and * as separators, a translation must never contain them.
@@ -140,6 +153,11 @@ namespace Puniemu.Src.Server.Translation
                     if (result.Contains(p.Key)) result = result.Replace(p.Key, p.Value);
                 }
             }
+            if (RomajiFallback && _patternDepth == 0 && result == text && Romaji.IsNameLike(text))
+            {
+                result = Romaji.Convert(text);
+                _usedFallback = true;
+            }
             changed = result != text;
             return result;
         }
@@ -148,6 +166,8 @@ namespace Puniemu.Src.Server.Translation
         {
             var cache = DataManager.Logic.DataManager.GameDataManager.GamedataCache;
             int translated = 0, remaining = 0;
+            _collect = new Dictionary<string, int>();
+            _romaji = 0;
             foreach (var key in cache.Keys.ToList())
             {
                 var raw = cache[key];
@@ -164,6 +184,9 @@ namespace Puniemu.Src.Server.Translation
             }
             TranslatedCells = translated;
             RemainingJapaneseCells = remaining;
+            RomajiCells = _romaji;
+            _untranslated = _collect;
+            _collect = null;
         }
 
         // Translates one table's text (used for tables added after startup, e.g. by event packs).
@@ -228,10 +251,59 @@ namespace Puniemu.Src.Server.Translation
             if (!JAPANESE.IsMatch(s)) return s;
             // A JSON string that itself contains a pipe table
             if (s.Contains('|') || s.Contains('*')) return TranslatePipe(s, ref translated, ref remaining);
+            _usedFallback = false;
             var r = Translate(s, out var changed);
             if (changed) translated++;
-            if (JAPANESE.IsMatch(r)) remaining++;
+            if (JAPANESE.IsMatch(r)) { remaining++; Note(s); }
+            else if (_usedFallback) { _romaji++; Note(s); }
             return changed ? r : s;
+        }
+
+        private static readonly Regex HIRAGANA_ONLY = new(@"^[ぁ-ゟー]+$", RegexOptions.Compiled);
+
+        // Columns in which (nearly) every value is plain hiragana hold the reading of another column.
+        private static HashSet<int> ReadingColumns(string[] rows)
+        {
+            var result = new HashSet<int>();
+            if (rows.Length < 20) return result;
+            var hira = new Dictionary<int, int>();
+            var filled = new Dictionary<int, int>();
+            var distinct = new Dictionary<int, HashSet<string>>();
+            foreach (var row in rows)
+            {
+                if (row.Contains('^') && !row.Contains('|')) continue;
+                var cells = row.Split('|');
+                for (int c = 0; c < cells.Length; c++)
+                {
+                    if (cells[c].Length == 0 || cells[c] == "0") continue;
+                    filled[c] = filled.GetValueOrDefault(c) + 1;
+                    if (!HIRAGANA_ONLY.IsMatch(cells[c])) continue;
+                    hira[c] = hira.GetValueOrDefault(c) + 1;
+                    if (!distinct.TryGetValue(c, out var set)) distinct[c] = set = new HashSet<string>();
+                    set.Add(cells[c]);
+                }
+            }
+            foreach (var kv in hira)
+                // many different values ("なし" in every row is a label, not a reading)
+                if (kv.Value >= 20 && kv.Value >= filled[kv.Key] * 0.9 && distinct[kv.Key].Count >= kv.Value / 2) result.Add(kv.Key);
+            return result;
+        }
+
+        private static void Note(string original)
+        {
+            if (_collect == null) return;
+            var key = original.Replace("\r", "");
+            _collect[key] = _collect.TryGetValue(key, out var n) ? n + 1 : 1;
+        }
+
+        // Every text that is still Japanese, most frequent first, as a dictionary file with empty values:
+        // translate the values and put the file in Translations/<lang>/.
+        public static string ExportUntranslatedJson()
+        {
+            var o = new JObject { ["_info"] = $"{_untranslated.Count} untranslated texts. Fill in the values and keep this file in Translations/{DataManager.Logic.DataManager.Language}/ - empty values are ignored." };
+            foreach (var kv in _untranslated.OrderByDescending(x => x.Value).ThenBy(x => x.Key, StringComparer.Ordinal))
+                o[kv.Key] = "";
+            return o.ToString(Formatting.Indented);
         }
 
         private static string TranslatePipe(string text, ref int translated, ref int remaining)
@@ -239,6 +311,7 @@ namespace Puniemu.Src.Server.Translation
             if (!JAPANESE.IsMatch(text)) return text;
             bool any = false;
             var rows = text.Split('*');
+            var readings = ReadingColumns(rows);
             for (int r = 0; r < rows.Length; r++)
             {
                 if (!JAPANESE.IsMatch(rows[r])) continue;
@@ -249,9 +322,14 @@ namespace Puniemu.Src.Server.Translation
                 for (int c = 0; c < cells.Length; c++)
                 {
                     if (!JAPANESE.IsMatch(cells[c])) continue;
-                    var nc = Translate(cells[c], out var changed);
+                    // kana readings of the names ("じばにゃん"), used for sorting - not shown, left alone
+                    if (readings.Contains(c) && HIRAGANA_ONLY.IsMatch(cells[c])) continue;
+                    var orig = cells[c];
+                    _usedFallback = false;
+                    var nc = Translate(orig, out var changed);
                     if (changed) { cells[c] = nc; rowChanged = true; translated++; }
-                    if (JAPANESE.IsMatch(nc)) remaining++;
+                    if (JAPANESE.IsMatch(nc)) { remaining++; Note(orig); }
+                    else if (_usedFallback) { _romaji++; Note(orig); }
                 }
                 if (rowChanged) { rows[r] = string.Join(sep, cells); any = true; }
             }

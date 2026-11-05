@@ -45,5 +45,11 @@
  "^(.+?)をクリアしよう$": "Clear $1",
  "^<R>?(.+?)</R>?を<R>?([0-9０-９]+)</R>?回倒そう$": "Defeat $1 $2 times",
  "^<R>?(.+?)</R>?を倒そう$": "Defeat $1",
- "^([A-Z]{1,4})\\s?([\\u3040-\\u30ff\\u3400-\\u9fff].+)$": "$1 $2"
+ "^([A-Z]{1,4})\\s?([\\u3040-\\u30ff\\u3400-\\u9fff].+)$": "$1 $2",
+ "^この特典のときの10連ガシャで([A-Z+]+)以上が1体確定$": "This bonus: one $1 rank or higher\nguaranteed in a 10-pull",
+ "^この特典のときの10連ガシャで([A-Z+]+)が1体確定$": "This bonus: one $1 rank\nguaranteed in a 10-pull",
+ "^この特典のときの10連ガシャで([A-Z+]+)以上の新キャラが1体確定$": "This bonus: one new $1 rank or higher\ncharacter guaranteed in a 10-pull",
+ "^この特典のときの10連ガシャで([A-Z+]+)の新キャラが1体確定$": "This bonus: one new $1 rank\ncharacter guaranteed in a 10-pull",
+ "^この特典のときの10連ガシャで([A-Z+]+)以上のコラボキャラが1体確定$": "This bonus: one $1 rank or higher\ncollab character guaranteed in a 10-pull",
+ "^この特典のときの10連ガシャで([A-Z+]+)のコラボキャラが1体確定$": "This bonus: one $1 rank\ncollab character guaranteed in a 10-pull"
 }
