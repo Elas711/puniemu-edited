@@ -248,8 +248,8 @@ In the master data every Yo-kai of a rank has exactly the same total stats (all 
 all UZ: 2900, all UZ+: 3330); the power creep comes from the new ranks (ZZ 2020, ZZZ 2021, UZ 2023,
 UZ+ 2025). `"BalanceStrength"` moves every rank toward the top rank: `0` = original, `0.5` closes
 half of the gap (rank D x4.3, S x2.2, Z x1.5, UZ x1.16), `1` gives every Yo-kai top-rank stats. HP and
-attack keep their ratio, enemies are not changed, Yo-kai you already own get the new stats at their
-next level-up. Changed tables get a new master version, so clients download them again.
+attack keep their ratio, enemies are not changed, Yo-kai players already own are scaled at
+their next login (and scaled back if the setting is lowered; limit-break bonuses are kept). Changed tables get a new master version, so clients download them again.
 
 ### Crank-a-kai: every machine, coins and mixes
 

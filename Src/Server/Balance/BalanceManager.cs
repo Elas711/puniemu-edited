@@ -21,15 +21,23 @@ namespace Puniemu.Src.Server.Balance
 
         public static double Strength { get; private set; }
         public static Dictionary<int, double> Factors { get; private set; } = new();
+        // median total stats per rank in the original data, and the top one
+        private static Dictionary<int, int> _totals = new();
+        private static int _top;
+        private static Dictionary<long, int> _rankOf = new();
+        public static int RankOf(long youkaiId) => _rankOf.TryGetValue(youkaiId, out var r) ? r : 0;
+
+        public static double FactorFor(int rank, double strength) =>
+            _totals.TryGetValue(rank, out var t) && t > 0 ? (t + Math.Clamp(strength, 0, 1) * (_top - t)) / t : 1.0;
 
         public static void Initialize(double strength)
         {
             Strength = Math.Clamp(strength, 0, 1);
-            if (Strength <= 0) return;
             var cache = DataManager.Logic.DataManager.GameDataManager.GamedataCache;
             if (!cache.TryGetValue(TABLE, out var raw)) return;
             var rows = EventManager.ReadPipeRows(raw, out var wrap);
             static int I(string[] r, int c) => r.Length > c && int.TryParse(r[c], out var v) ? v : 0;
+            _rankOf = rows.Where(r => r.Length > RANK && long.TryParse(r[0], out _)).GroupBy(r => long.Parse(r[0])).ToDictionary(g => g.Key, g => I(g.First(), RANK));
 
             // median total per rank
             var totals = rows.Where(r => r.Length > MAX_ATK && I(r, RANK) > 0 && I(r, MAX_HP) > 0)
@@ -37,6 +45,8 @@ namespace Puniemu.Src.Server.Balance
                              .ToDictionary(g => g.Key, g => g.Select(r => I(r, MAX_HP) + I(r, MAX_ATK)).OrderBy(x => x).ElementAt(g.Count() / 2));
             if (totals.Count == 0) return;
             var top = totals.Values.Max();
+            _totals = totals; _top = top;
+            if (Strength <= 0) return;
             Factors = totals.ToDictionary(kv => kv.Key, kv => (kv.Value + Strength * (top - kv.Value)) / kv.Value);
 
             int changed = 0;
@@ -53,6 +63,50 @@ namespace Puniemu.Src.Server.Balance
             MasterVersions.MarkChanged(cache, TABLE);
             Log.Info("balance", $"BalanceStrength {Strength:0.##}: stats of {changed} Yo-kai raised (" +
                 string.Join(", ", Factors.OrderBy(k => k.Key).Where(k => k.Value > 1.0001).Select(k => $"rank {k.Key} x{k.Value:0.00}")) + ")");
+        }
+    }
+
+    // Yo-kai a player already owns keep the stats they had when they were befriended (levels only
+    // add to them), so at login they are scaled from the strength they were last adjusted to
+    // (stored with the save) to the current one. Works both ways, keeps limit-break bonuses.
+    public static class OwnedStats
+    {
+        private const string MARKER = "puniemu_balance";
+
+        // New saves get their Yo-kai from the (balanced) master data already.
+        public static Task MarkCurrentAsync(string gdkey) =>
+            UserDataManager.Logic.UserDataManager.SetYwpUserAsync(gdkey, MARKER, new Dictionary<string, double> { ["strength"] = BalanceManager.Strength });
+
+        public static async Task SyncAsync(string gdkey)
+        {
+            try
+            {
+                double before = 0;
+                var marker = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<Dictionary<string, double>>(gdkey, MARKER);
+                if (marker != null && marker.TryGetValue("strength", out var b)) before = b;
+                var now = BalanceManager.Strength;
+                if (Math.Abs(before - now) < 0.0001) return;
+                var raw = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(gdkey, "ywp_user_youkai");
+                if (raw == null) return;
+                var table = new Puniemu.Src.TableParser.Logic.TableParser<Puniemu.Src.TableParser.DataClasses.YwpUserYoukai>(raw);
+                int n = 0;
+                foreach (var y in table.Items)
+                {
+                    var rank = BalanceManager.RankOf(y.YoukaiId);
+                    var ratio = BalanceManager.FactorFor(rank, now) / BalanceManager.FactorFor(rank, before);
+                    if (Math.Abs(ratio - 1) < 0.0001) continue;
+                    y.Hp = (int)Math.Round(y.Hp * ratio);
+                    y.Atk = (int)Math.Round(y.Atk * ratio);
+                    n++;
+                }
+                await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(gdkey, "ywp_user_youkai", table.ToString());
+                await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(gdkey, MARKER, new Dictionary<string, double> { ["strength"] = now });
+                if (n > 0) Log.Info("balance", $"{gdkey}: {n} owned Yo-kai adjusted from strength {before:0.##} to {now:0.##}");
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("balance", $"Could not adjust the Yo-kai of {gdkey}: {ex.Message}");
+            }
         }
     }
 

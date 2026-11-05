@@ -34,6 +34,8 @@ namespace Puniemu.Src.Server.GameServer.Requests.Login.Logic
                 await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(deserialized.Gdkey, "ywp_user_addition", false);
             }
             await ShopLimitManager.CheckShopLimitReset(deserialized.Gdkey);
+            // owned Yo-kai follow the server's BalanceStrength (see Src/Server/Balance)
+            await Puniemu.Src.Server.Balance.OwnedStats.SyncAsync(deserialized.Gdkey!);
             //Server-wide gifts created from the admin panel
             var gifts = await Puniemu.Src.Server.Admin.GrantService.ClaimPendingGiftsAsync(deserialized.Gdkey!);
             if (gifts.Count > 0) Puniemu.Src.Server.Infrastructure.Log.Info("gifts", $"{deserialized.Gdkey} received {gifts.Count} gift(s)");

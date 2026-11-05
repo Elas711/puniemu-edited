@@ -183,6 +183,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.CreateUser.Logic
                 }
             }
             await UserDataManager.Logic.UserDataManager.SetEntireUserData(deserialized.Level5UserID, tables!);
+            await Puniemu.Src.Server.Balance.OwnedStats.MarkCurrentAsync(deserialized.Level5UserID!);
         }
     }
 }
