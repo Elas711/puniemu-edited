@@ -12,6 +12,7 @@ import argparse
 import collections
 import io
 import os
+import time
 import zipfile
 
 import requests
@@ -41,7 +42,14 @@ class HttpFile(io.RawIOBase):
         if self.pos >= self.size or len(b) == 0:
             return 0
         end = min(self.size, self.pos + len(b)) - 1
-        d = self.s.get(self.url, headers={"Range": f"bytes={self.pos}-{end}"}, timeout=120).content
+        for attempt in range(6):  # archive.org drops connections now and then
+            try:
+                d = self.s.get(self.url, headers={"Range": f"bytes={self.pos}-{end}"}, timeout=120).content
+                break
+            except requests.RequestException:
+                if attempt == 5:
+                    raise
+                time.sleep(2 ** attempt)
         b[:len(d)] = d
         self.pos += len(d)
         return len(d)
