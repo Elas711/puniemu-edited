@@ -24,7 +24,19 @@ Uploads useful for Puniemu (found November 2026):
 | `yo-kai-watch-puni-puni-event-archives` | iOS client caches of 4.172.0 (Leisure Land + Rent-a-Girlfriend) and 4.175.0 (Hololive #8): event images, sounds, `.ayd`/`.ez` files, the in-game web pages (crank-a-kai odds, notices), and the client's master data cache (`Caches/ywp_cud/*.cud`, encrypted with a per-device key, not readable yet) |
 | `4.117.1` | Android data folder of 4.117.1 (2023): 51,500 asset files incl. events 203-205, crank-a-kai 222-227 and 40 maps the official server no longer has; `ywp_cud` master cache (encrypted) |
 | `ykwpp-dump-4.123.0-ver`, `-4.124.0-ver-galaxy-watch-part-3-event`, `-4.129.0-ver` | listed, but their files have been removed |
-| MediaFire `YKWPP1.0.3-4.96.0 files.zip` (2.1 GB, by Math_kk) | behind a Cloudflare bot check: download it in a browser |
+| MediaFire `YKWPP1.0.3-4.96.0 files.zip` (2.1 GB RAR, by Math_kk) | mirror of the official file server from 1.0.3 to 4.96.0 (version/date folders, 45,704 files) |
+| MediaFire `Yo-kai Watch Puni Puni 4.146.1 Data.rar` (3.0 GB, by Math_kk) | Android data folder of 4.146.1 (2025), 61,798 files + `ywp_cud` cache + shared_prefs (ad SDKs only) |
+| MediaFire `files.rar` (4.0 GB, by Pablxx Puni, 2026-10) | Android data folder (2026), 73,967 files + `ywp_cud` cache |
+
+Every asset file of the three MediaFire packs is still on the official file server, so a full
+download with the data downloader already has them. MediaFire's page shows a Cloudflare bot check
+to servers; `Tools/mediafire_download.py --direct <link copied from the Download button>` fetches the
+file from the download server (no check there), resumes and verifies the SHA-256.
+
+The `.cud` master-data caches in all dumps (4.117.1 - 4.177) stay unreadable: not the request cipher
+(`JsonCryptor` key `a865d7e5...` / salt `0bk2kvtFE2`, as hex or text, ECB or CBC) nor the `.ez` /
+sound keys. In the 2.2.6 client `CustomUserDefault::saveData` only writes the bytes; the 4.x key is
+in the encrypted code.
 | `yo-kai-watch-wibble-wobble-reloaded-server-data-apk` | Wibble Wobble Reloaded: APK + server data (`Resources`, `dataDownload`) |
 | `NAYokaiWatchWibbleWobble.7z`, `ywpeu2.0.3` | Wibble Wobble NA / EU data download (+ APK) |
 | `TWPuniPuni.7z` | Taiwan Puni Puni data download |
