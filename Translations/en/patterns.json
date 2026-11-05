@@ -1,0 +1,13 @@
+{
+ "_info": "Regular expressions applied to whole texts that are still Japanese. $1, $2... are the captured parts (translated with the other dictionaries when possible).",
+ "^ステージ([0-9０-９]+)$": "Stage $1",
+ "^ボスステージ([0-9０-９]+)$": "Boss Stage $1",
+ "^かくしステージ([0-9０-９]+)$": "Hidden Stage $1",
+ "^裏ステージ([0-9０-９]+)$": "Reverse Stage $1",
+ "^ステージ<R>?([0-9０-９]+)</R>?をクリアしよう$": "Clear Stage $1",
+ "^ボスステージ<R>?([0-9０-９]+)</R>?の<R>?(.+?)</R>?を倒そう$": "Defeat $2 in Boss Stage $1",
+ "^<R>?(.+?)</R>?を<R>?([0-9０-９]+)</R>?回倒そう$": "Defeat $1 $2 times",
+ "^<R>?(.+?)</R>?を倒そう$": "Defeat $1",
+ "^スコアアタックをプレイしよう$": "Play Score Attack",
+ "^(.+) Lv([0-9]+)$": "$1 Lv$2"
+}

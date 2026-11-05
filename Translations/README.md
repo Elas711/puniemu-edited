@@ -8,6 +8,8 @@ Puniemu can translate it before sending it to the game.
    * `{"ジバニャン": "Jibanyan"}` - replaces text cells that match exactly,
    * files whose name starts with `phrases` are applied as substring replacements afterwards
      (longest first). Use them carefully, they can produce mixed sentences.
+   * files whose name starts with `patterns` hold regular expressions for numbered texts
+     (`"^ステージ([0-9]+)$": "Stage $1"`); captured parts are translated with the other dictionaries.
 3. Restart the server. The console and the admin panel show how many texts were translated.
 
 ## Building a full dictionary from Wibble Wobble

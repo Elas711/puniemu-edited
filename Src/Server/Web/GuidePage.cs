@@ -48,7 +48,7 @@ button.btn.off{background:#f1e6d6;color:var(--ink)} a.btn.sec{background:#7048e8
 .lb img{max-width:94%;max-height:80%}
 </style></head>
 <body>
-<header><button id=""back"" style=""display:none"">&#8592;</button><h1 id=""title"">Event Guide</h1><button id=""helpBtn"">? Help</button></header>
+<header><button id=""back"" style=""display:none"">&#8592;</button><h1 id=""title"">Event Guide</h1><button id=""wikiBtn"" onclick=""location.href='/web/wiki.nhn?userId='+encodeURIComponent(USER_ID)"">&#128218; Wiki</button><button id=""helpBtn"">? Help</button></header>
 <main id=""app"">Loading...</main>
 <div id=""toast""></div>
 <div class=""lb"" id=""lb""><img id=""lbimg"" alt=""""><p id=""lbname""></p></div>

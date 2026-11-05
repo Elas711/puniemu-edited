@@ -20,8 +20,9 @@ namespace Puniemu.Src.Server.Translation
 
         private static Dictionary<string, string> _exact = new();
         private static List<KeyValuePair<string, string>> _phrases = new();
+        private static List<KeyValuePair<Regex, string>> _patterns = new();
 
-        public static int LoadedEntries => _exact.Count + _phrases.Count;
+        public static int LoadedEntries => _exact.Count + _phrases.Count + _patterns.Count;
         public static int TranslatedCells { get; private set; }
         public static int RemainingJapaneseCells { get; private set; }
         public static bool Enabled => !string.IsNullOrEmpty(DataManager.Logic.DataManager.Language);
@@ -39,11 +40,23 @@ namespace Puniemu.Src.Server.Translation
 
             var exact = new Dictionary<string, string>();
             var phrases = new Dictionary<string, string>();
+            var patterns = new List<KeyValuePair<Regex, string>>();
             foreach (var file in Directory.EnumerateFiles(dir, "*.json").OrderBy(x => x))
             {
                 try
                 {
                     var dict = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(file, Encoding.UTF8)) ?? new();
+                    // patterns*.json: regular expressions for numbered texts ("ステージ12" -> "Stage 12")
+                    if (Path.GetFileName(file).StartsWith("patterns", StringComparison.OrdinalIgnoreCase))
+                    {
+                        foreach (var kv in dict)
+                        {
+                            if (kv.Key.StartsWith("_") || string.IsNullOrEmpty(kv.Value)) continue;
+                            try { patterns.Add(new(new Regex(kv.Key, RegexOptions.Compiled | RegexOptions.Singleline, TimeSpan.FromMilliseconds(50)), Sanitize(kv.Value))); }
+                            catch (Exception ex) { Log.Warn("translation", $"Bad pattern '{kv.Key}': {ex.Message}"); }
+                        }
+                        continue;
+                    }
                     var target = Path.GetFileName(file).StartsWith("phrases", StringComparison.OrdinalIgnoreCase) ? phrases : exact;
                     foreach (var kv in dict)
                     {
@@ -58,9 +71,10 @@ namespace Puniemu.Src.Server.Translation
             }
             _exact = exact;
             _phrases = phrases.OrderByDescending(x => x.Key.Length).ToList();
+            _patterns = patterns;
 
             ApplyToGameData();
-            Log.Info("translation", $"Language '{lang}': {exact.Count} strings + {phrases.Count} phrases loaded, {TranslatedCells} texts translated, {RemainingJapaneseCells} still Japanese.");
+            Log.Info("translation", $"Language '{lang}': {exact.Count} strings + {phrases.Count} phrases + {patterns.Count} patterns loaded, {TranslatedCells} texts translated, {RemainingJapaneseCells} still Japanese.");
         }
 
         // The table format uses | and * as separators, a translation must never contain them.
@@ -80,6 +94,28 @@ namespace Puniemu.Src.Server.Translation
                 // Some cells differ only by line breaks.
                 var flat = text.Replace("\r", "").Replace("\n", "");
                 if (flat != text && _exact.TryGetValue(flat, out hit)) result = hit;
+            }
+            if (_patterns.Count > 0 && JAPANESE.IsMatch(result))
+            {
+                foreach (var p in _patterns)
+                {
+                    try
+                    {
+                        // Captured parts are translated too ("ボスステージ13のジバニャンを倒そう")
+                        var m = p.Key.Match(result.Replace("\r", "").Replace("\n", ""));
+                        if (!m.Success) continue;
+                        var repl = p.Value;
+                        for (int g = m.Groups.Count - 1; g >= 1; g--)
+                        {
+                            var part = m.Groups[g].Value;
+                            if (_exact.TryGetValue(part, out var tp)) part = tp;
+                            repl = repl.Replace("$" + g, part);
+                        }
+                        result = repl;
+                        break;
+                    }
+                    catch (RegexMatchTimeoutException) { }
+                }
             }
             if (_phrases.Count > 0 && JAPANESE.IsMatch(result))
             {

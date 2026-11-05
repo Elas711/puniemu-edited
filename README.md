@@ -204,6 +204,26 @@ Set `AdminToken` and open `http://your-server:8080/admin`, enter the token.
 Runtime settings are stored in `server_state.json`. The API behind the panel is under
 `/admin/api/*` (token in the `X-Admin-Token` header).
 
+### In-game wiki
+
+In game: **Help → Wiki**. Everything is built from the server's own game data (so it always matches
+the server, and is in English when the data is English or translated) plus hand-written guides:
+
+* **Yo-kai** - search and filter by rank and tribe; each page shows the picture, rank, tribe,
+  favourite food, HP / attack, Soultimate, bonus effect, evolution and **where to befriend it**
+* **Maps & stages** - every stage with its 3 star conditions, enemies, boss / hidden markers,
+  recommended level and hidden-stage unlock conditions (when the data has them)
+* **Items**, **missions** (with rewards) and **Crank-a-kai** machines with price, odds per rank and
+  every Yo-kai inside
+* **15 guides**: getting started, battles & combos, befriending, ranks & tribes, levels & evolution,
+  stars & hidden stages, items, crank-a-kai, missions, Score Attack, watches, events, friends,
+  keeping your save safe, and a **Japanese → English glossary** for the Japanese app
+* **This server** (current rates and rules) and links to community sites (Mt. Wildwood, Game8,
+  Yo-kai Watch España, the Yo-kai Watch Fandom wiki...)
+
+Pictures come from the data download (`bl_<id>.png` and similar), so they appear when
+`ServeDataDownload` has the files.
+
 ### In-game Event Guide
 
 In game: **Help → Event Guide** (also linked from the notice page and the Events & Server page).
@@ -227,6 +247,7 @@ You can also add your own `"notes"` to any event in `Events/history.json`.
   **Events & Server** button.
 * `/web/portal.nhn` - player portal: news and personal event selection.
 * `/web/guide.nhn` - the Event Guide.
+* `/web/wiki.nhn` - the wiki.
 * `/web/noticeBannerPage.nhn`, `/web/viewpage.nhn?webviewId=...` - notice pages from `Web/Page/`
   (see [Web/README.md](Web/README.md)).
 

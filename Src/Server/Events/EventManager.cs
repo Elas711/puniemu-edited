@@ -327,6 +327,7 @@ namespace Puniemu.Src.Server.Events
                 _transformTables = transformTables;
             }
             _servedCache.Clear();
+            Puniemu.Src.Server.Web.Wiki.WikiData.Invalidate();
             Log.Info("events", $"Event catalog: {catalog.Count} events ({catalog.Values.Count(x => x.Selectable)} switchable, {catalog.Values.Count(x => x.Pack != null)} from packs)");
         }
 

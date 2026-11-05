@@ -135,6 +135,30 @@ namespace Puniemu.Src.Server.Web
             }
         }
 
+        private static readonly System.Text.RegularExpressions.Regex SAFE_ASSET = new(@"^[A-Za-z0-9_\-]{1,80}\.(png|jpg|webp)$");
+
+        // Finds a data download picture by file name (asset overlay first). Used by the in-game wiki.
+        public static bool TryFindAsset(string name, out string path)
+        {
+            path = "";
+            if (!SAFE_ASSET.IsMatch(name)) return false;
+            if (AssetOverlay.TryGet(name, out path)) return true;
+            return _fileIndex != null && _fileIndex.TryGetValue(name, out path!);
+        }
+
+        public static async Task HandleAssetAsync(HttpContext ctx)
+        {
+            var name = (string?)ctx.Request.RouteValues["name"] ?? "";
+            if (!TryFindAsset(name, out var path))
+            {
+                ctx.Response.StatusCode = 404;
+                return;
+            }
+            ctx.Response.ContentType = name.EndsWith(".png") ? "image/png" : name.EndsWith(".webp") ? "image/webp" : "image/jpeg";
+            ctx.Response.Headers["Cache-Control"] = "public, max-age=86400";
+            await ctx.Response.SendFileAsync(path);
+        }
+
         // Orders two copies of a file by the version folders they are in (app version, then date).
         private static int CompareVersionPaths(string root, string a, string b)
         {
@@ -179,6 +203,8 @@ namespace Puniemu.Src.Server.Web
             var guide = "/web/guide.nhn?userId=" + WebUtility.UrlEncode(userId ?? "");
             return $@"
 <div style=""position:fixed;right:12px;bottom:12px;z-index:99999;display:flex;flex-direction:column;gap:8px;align-items:flex-end"">
+<a href=""{WebUtility.HtmlEncode("/web/wiki.nhn?userId=" + WebUtility.UrlEncode(userId ?? ""))}"" id=""puniemu-wiki-btn"" style=""background:#1c7ed6;color:#fff;font:bold 15px sans-serif;padding:12px 16px;border-radius:24px;text-decoration:none;
+box-shadow:0 2px 8px rgba(0,0,0,.3)"">&#128218; Wiki</a>
 <a href=""{WebUtility.HtmlEncode(guide)}"" id=""puniemu-guide-btn"" style=""background:#7048e8;color:#fff;font:bold 15px sans-serif;padding:12px 16px;border-radius:24px;text-decoration:none;
 box-shadow:0 2px 8px rgba(0,0,0,.3)"">&#128214; Event Guide</a>
 <a href=""{WebUtility.HtmlEncode(href)}"" id=""puniemu-portal-btn"" style=""background:#e8590c;color:#fff;font:bold 15px sans-serif;padding:12px 16px;border-radius:24px;text-decoration:none;

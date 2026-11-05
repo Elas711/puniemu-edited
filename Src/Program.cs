@@ -507,6 +507,9 @@ class Program
         app.MapGet("/web/api/guide/event", EventGuide.HandleEventAsync);
         app.MapPost("/web/api/guide/play", EventGuide.HandlePlayAsync);
 
+        //In-game wiki: Yo-kai, maps & stages, items, missions, crank-a-kai, guides
+        Puniemu.Src.Server.Web.Wiki.WikiApi.Map(app);
+
         //Admin panel
         AdminPanel.Map(app);
 
