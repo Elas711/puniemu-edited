@@ -101,13 +101,23 @@ def load_glossary(folder, extra):
             k = unicodedata.normalize("NFKC", k)
             if not JAPANESE.search(k) or JAPANESE.search(v) or "\n" in k:
                 continue
-            if len(v.split()) > 4 or re.search(r"[.!?]$", v) or len(k) < 2:
+            # one-character terms only from the hand-made glossary
+            if len(v.split()) > 4 or re.search(r"[.!?]$", v) or (len(k) < 2 and f != extra):
                 continue
             # short hiragana words ("たま", "かぜ") are inside too many other words
-            if not re.search(r"[ァ-ヿ㐀-鿿]", k) and len(k) < 4:
+            if not re.search(r"[ァ-ヿ㐀-鿿]", k) and len(k) < 4 and f != extra:
                 continue
             terms[k] = v.strip()
     return sorted(terms.items(), key=lambda kv: -len(kv[0]))
+
+
+NUMBER_TERMS = [(re.compile(r"(\d+)周年"), lambda m: f" {m.group(1)}{ordinal(int(m.group(1)))} Anniversary "),
+                (re.compile(r"(\d+)連ガシャ"), r" \1-pull Crank-a-kai "),
+                (re.compile(r"(\d+)連"), r" \1-pull ")]
+
+
+def ordinal(n):
+    return "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
 
 
 def protect(text, glossary):
@@ -115,6 +125,8 @@ def protect(text, glossary):
     used = []
     if not JAPANESE.search(text):
         return text, used
+    for rx, en in NUMBER_TERMS:
+        text = rx.sub(en, text)
     for k, v in glossary:
         if k in text:
             text = text.replace(k, f" {v} ")
@@ -146,6 +158,8 @@ def tidy(src, out, used):
     if len(out) > 3 and out.isupper() and not src.isascii():
         out = " ".join(w if len(w) <= 3 else w[:1] + w[1:].lower() for w in out.split())
     out = out.replace("’", "'")
+    # the Japanese middle dot between name parts ("Y覚醒・剣豪紅丸")
+    out = re.sub(r"\s*[・･]\s*", ": " if "・" in src and not HIRAGANA.search(src) else " ", out).strip()
     if "%" in src or "％" in src:
         out = re.sub(r"(\d) percent\b", r"\1%", out)
     out = re.sub(r"(?<=[A-Za-z]):(?=[0-9+\-])", ": ", out)
@@ -216,17 +230,31 @@ def prepare(page, glossary):
     """One page of text -> (sentences for the model, names used, line layout, highlights)."""
     lines = page.split("\n")
     highlights = [m.group(2) for m in TAG.finditer(page)]
-    srcs, used = [], []
+    srcs, used, joins = [], [], []
     for seg in segments(lines):
         flat = ANY_TAG.sub("", seg)
         for ph, stand_in in placeholders(page):
             flat = flat.replace(ph, stand_in)
+        # short labels made of parts ("10周年・極妖怪パス"): each part on its own, joined with ": "
+        # "HP・ATK" is a list, not name parts
+        flat = re.sub(r"(?<=[A-Za-z0-9])・(?=[A-Za-z0-9])", "/", flat)
+        if ("・" in flat and len(flat) <= 30 and not HIRAGANA.search(flat.replace("の", ""))
+                and not re.search(r"[！？!?。\n]", flat)
+                and all(len(x.strip()) >= 2 for x in flat.split("・"))):
+            parts = [x for x in flat.split("・") if x.strip()]
+            for k, part in enumerate(parts):
+                src, u = protect(unicodedata.normalize("NFKC", part).strip(), glossary)
+                srcs.append(src)
+                used += u
+                joins.append(": " if k < len(parts) - 1 else " ")
+            continue
         flat = unicodedata.normalize("NFKC", flat).replace("　", " ").strip()
         src, u = protect(flat, glossary)
         srcs.append(src)
         used += u
+        joins.append(" ")
     width = max(disp_width(ANY_TAG.sub("", l)) for l in lines) if lines else 0
-    return srcs, used, (len(lines), width), highlights
+    return srcs, used, (len(lines), width), highlights, joins
 
 
 NUM = re.compile(r"\d+(?:\.\d+)?")
@@ -251,8 +279,8 @@ def renumber(rep_src, rep_out, member):
         used.add(idx)
         pieces.append(rep_out[last:m.start()] + b[idx])
         last = m.end()
-    if len(used) != len(a) and len(set(a)) == len(a):
-        return None  # a number got lost in translation, translate this text on its own
+    if len(used) != len(a):
+        return None  # a number got lost ("3" -> "three"): translate this text on its own
     return "".join(pieces) + rep_out[last:]
 
 
@@ -318,11 +346,13 @@ def main():
         seg_out = {(n[0], n[1], n[2]): o for n, o in zip(need, outs)}
         result = {}
         for (tj, pi, prep) in jobs:
-            result[(tj, pi)] = " ".join(seg_out.get((tj, pi, si), sent) for si, sent in enumerate(prep[0]))
+            result[(tj, pi)] = "".join(seg_out.get((tj, pi, si), sent).strip().rstrip(".") + prep[4][si]
+                                       if prep[4][si] == ": " else seg_out.get((tj, pi, si), sent) + prep[4][si]
+                                       for si, sent in enumerate(prep[0])).strip()
         for ti, text in enumerate(batch):
             sep, pages = pages_of[ti]
             new_pages = []
-            for (tj, pi, (src, used, (nlines, width), highlights)) in [j for j in jobs if j[0] == ti]:
+            for (tj, pi, (src, used, (nlines, width), highlights, _)) in [j for j in jobs if j[0] == ti]:
                 out = tidy(pages[pi], result[(tj, pi)], used)
                 # put the game's placeholders back
                 for ph, stand_in in placeholders(pages[pi]):

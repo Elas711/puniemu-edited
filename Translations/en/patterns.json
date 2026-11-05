@@ -51,5 +51,11 @@
  "^この特典のときの10連ガシャで([A-Z+]+)以上の新キャラが1体確定$": "This bonus: one new $1 rank or higher\ncharacter guaranteed in a 10-pull",
  "^この特典のときの10連ガシャで([A-Z+]+)の新キャラが1体確定$": "This bonus: one new $1 rank\ncharacter guaranteed in a 10-pull",
  "^この特典のときの10連ガシャで([A-Z+]+)以上のコラボキャラが1体確定$": "This bonus: one $1 rank or higher\ncollab character guaranteed in a 10-pull",
- "^この特典のときの10連ガシャで([A-Z+]+)のコラボキャラが1体確定$": "This bonus: one $1 rank\ncollab character guaranteed in a 10-pull"
+ "^この特典のときの10連ガシャで([A-Z+]+)のコラボキャラが1体確定$": "This bonus: one $1 rank\ncollab character guaranteed in a 10-pull",
+ "^(.+?)以外HP・ATKダウン$": "HP/ATK down for everyone except $1",
+ "^(.+?)以外攻撃力・ダメカダウン$": "Attack/Damage Cut down for everyone except $1",
+ "^(.+?)以外(HP|攻撃力|ATK)ダウン$": "$2 down for everyone except $1",
+ "^(.+?)のHP・ATKアップ$": "HP/ATK up for $1",
+ "^(.+?)の攻撃力・ダメカアップ$": "Attack/Damage Cut up for $1",
+ "^【極】(.+)$": "[Kiwami] $1"
 }

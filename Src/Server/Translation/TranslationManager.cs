@@ -20,6 +20,8 @@ namespace Puniemu.Src.Server.Translation
         private static readonly Regex JAPANESE = new(@"[぀-ヿ㐀-鿿ｦ-ﾟ]", RegexOptions.Compiled);
 
         private static Dictionary<string, string> _exact = new();
+        // machine*.json: only used when neither the dictionaries nor the patterns give a full translation
+        private static Dictionary<string, string> _machine = new();
         private static List<KeyValuePair<string, string>> _phrases = new();
         private static List<KeyValuePair<Regex, string>> _patterns = new();
         [ThreadStatic] private static int _patternDepth;
@@ -29,7 +31,7 @@ namespace Puniemu.Src.Server.Translation
         private static int _romaji;
         public static IReadOnlyDictionary<string, int> Untranslated => _untranslated;
 
-        public static int LoadedEntries => _exact.Count + _phrases.Count + _patterns.Count;
+        public static int LoadedEntries => _exact.Count + _machine.Count + _phrases.Count + _patterns.Count;
         public static int TranslatedCells { get; private set; }
         public static int RemainingJapaneseCells { get; private set; }
         public static int RomajiCells { get; private set; }
@@ -50,6 +52,7 @@ namespace Puniemu.Src.Server.Translation
             }
 
             var exact = new Dictionary<string, string>();
+            var machine = new Dictionary<string, string>();
             var phrases = new Dictionary<string, string>();
             var patterns = new List<KeyValuePair<Regex, string>>();
             // Files are applied in alphabetical order, later files win. Machine translations
@@ -72,7 +75,9 @@ namespace Puniemu.Src.Server.Translation
                         }
                         continue;
                     }
-                    var target = Path.GetFileName(file).StartsWith("phrases", StringComparison.OrdinalIgnoreCase) ? phrases : exact;
+                    var name = Path.GetFileName(file);
+                    var target = name.StartsWith("phrases", StringComparison.OrdinalIgnoreCase) ? phrases
+                        : name.StartsWith("machine", StringComparison.OrdinalIgnoreCase) ? machine : exact;
                     foreach (var kv in dict)
                     {
                         if (string.IsNullOrEmpty(kv.Key) || string.IsNullOrWhiteSpace(kv.Value) || kv.Key.StartsWith("_")) continue;
@@ -85,11 +90,12 @@ namespace Puniemu.Src.Server.Translation
                 }
             }
             _exact = exact;
+            _machine = machine;
             _phrases = phrases.OrderByDescending(x => x.Key.Length).ToList();
             _patterns = patterns;
 
             ApplyToGameData();
-            Log.Info("translation", $"Language '{lang}': {exact.Count} strings + {phrases.Count} phrases + {patterns.Count} patterns loaded, {TranslatedCells} texts translated ({RomajiCells} of them as romaji names), {RemainingJapaneseCells} still Japanese.");
+            Log.Info("translation", $"Language '{lang}': {exact.Count} strings + {machine.Count} machine translations + {phrases.Count} phrases + {patterns.Count} patterns loaded, {TranslatedCells} texts translated ({RomajiCells} of them as romaji names), {RemainingJapaneseCells} still Japanese.");
         }
 
         // The table format uses | and * as separators, a translation must never contain them.
@@ -145,6 +151,13 @@ namespace Puniemu.Src.Server.Translation
                     }
                     catch (RegexMatchTimeoutException) { }
                 }
+            }
+            if (_machine.Count > 0 && JAPANESE.IsMatch(result))
+            {
+                var flat = text.Replace("\r", "");
+                if (_machine.TryGetValue(text, out var mhit) || _machine.TryGetValue(flat, out mhit) ||
+                    _machine.TryGetValue(flat.Normalize(System.Text.NormalizationForm.FormKC), out mhit))
+                    result = mhit;
             }
             if (_phrases.Count > 0 && JAPANESE.IsMatch(result))
             {

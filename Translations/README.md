@@ -57,7 +57,7 @@ Whatever no dictionary covers can be machine-translated offline, so every text i
    are kept, and texts that only differ in their numbers are translated once. It can be stopped and
    continues where it stopped. About 26,000 texts take 10-20 minutes on a normal CPU.
 4. Restart the server. `machine*.json` files are loaded first, so every other dictionary overrides
-   them: to fix a bad machine translation, put the corrected text in any other file.
+   them (and the patterns are tried before them): to fix a bad machine translation, put the corrected text in any other file.
 
 Two automatic fallbacks need no tool at all:
 
