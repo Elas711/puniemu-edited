@@ -145,9 +145,17 @@ The lists show each event's original dates and, when the data has them, the char
 in the event's story, to help recognise unnamed events. See [Events/README.md](Events/README.md) for
 event packs and friendly names (`Events/names.json`).
 
-**More past events:** drop older dumps' `ywp_mst_*` files (for example the event tables and
-`ywp_mst_map` of an older version) into `Resources/` or turn them into event packs - every event
-found in them is added to the catalog automatically.
+**More past events from old dumps:** extract all the dumps you have (for example the community
+archive of past Puni Puni dumps) into one folder and run
+
+```
+python Tools/import_dumps.py --current Resources --dumps path/to/extracted/dumps --out Events/imported
+```
+
+It writes one event pack per past event that your current data doesn't have (event row, maps,
+quests, bonuses, story) plus a data-only pack with the Yo-kai, stages, enemies and items those events
+need. Restart the server or press **Rescan data**: the events show up in both event lists. The dump
+files are only parsed as data, never executed.
 
 ### English translation
 

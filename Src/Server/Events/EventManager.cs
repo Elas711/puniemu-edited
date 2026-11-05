@@ -73,6 +73,12 @@ namespace Puniemu.Src.Server.Events
         {
             var catalog = new Dictionary<long, EventInfo>();
             var cache = DataManager.Logic.DataManager.GameDataManager.GamedataCache;
+            // Start from the data as loaded from Resources (drop rows merged by a previous scan)
+            lock (_pristine)
+            {
+                foreach (var kv in _pristine) cache[kv.Key] = kv.Value;
+                _pristine.Clear();
+            }
 
             EventInfo Get(long id)
             {
@@ -167,10 +173,12 @@ namespace Puniemu.Src.Server.Events
             // 4. event packs
             var transformTables = new HashSet<string> { EVENT_TABLE, MAP_TABLE };
             foreach (var t in PIPE_RULES.Keys) transformTables.Add(t);
+            var dataPacks = new List<EventPack>();
             var dir = DataManager.Logic.DataManager.ResolvePath(DataManager.Logic.DataManager.EventsPath);
             if (Directory.Exists(dir))
             {
-                foreach (var file in Directory.EnumerateFiles(dir, "*.json").OrderBy(x => x))
+                // Sub folders are scanned too (Tools/import_dumps.py writes Events/imported/)
+                foreach (var file in Directory.EnumerateFiles(dir, "*.json", SearchOption.AllDirectories).OrderBy(x => x))
                 {
                     var fileName = Path.GetFileName(file);
                     if (fileName.Equals("names.json", StringComparison.OrdinalIgnoreCase)) continue;
@@ -182,7 +190,13 @@ namespace Puniemu.Src.Server.Events
                         else packs.Add(tok.ToObject<EventPack>()!);
                         foreach (var pack in packs)
                         {
-                            if (pack.EventId == 0) continue;
+                            pack.FileName = fileName;
+                            // eventId 0 = data-only pack (missing Yo-kai, stages, items... from older dumps)
+                            if (pack.EventId == 0)
+                            {
+                                if (pack.Tables.Count > 0) dataPacks.Add(pack);
+                                continue;
+                            }
                             pack.FileName = fileName;
                             var e = Get(pack.EventId);
                             e.Pack = pack;
@@ -227,6 +241,8 @@ namespace Puniemu.Src.Server.Events
                 }
             }
 
+            MergePacksIntoGameData(dataPacks.Concat(catalog.Values.Where(x => x.Pack != null).Select(x => x.Pack!)).ToList());
+
             foreach (var e in catalog.Values)
             {
                 e.MapIds = e.MapIds.Distinct().Where(x => x != 0).ToList();
@@ -241,6 +257,68 @@ namespace Puniemu.Src.Server.Events
             }
             _servedCache.Clear();
             Log.Info("events", $"Event catalog: {catalog.Count} events ({catalog.Values.Count(x => x.Selectable)} switchable, {catalog.Values.Count(x => x.Pack != null)} from packs)");
+        }
+
+        // Original text of every table a pack added rows to, so a rescan starts from clean data.
+        private static readonly Dictionary<string, string> _pristine = new();
+
+        // Pack rows (maps, stages, enemies, quests...) are added to the game data itself, so the game
+        // logic (map warp, stage start...) can use them too. Whether the player can reach them is still
+        // decided by the event selection: the maps of inactive events stay closed. ywp_mst_event rows
+        // are the exception: they are only served while the event is selected.
+        private static void MergePacksIntoGameData(List<EventPack> packs)
+        {
+            var cache = DataManager.Logic.DataManager.GameDataManager.GamedataCache;
+            lock (_pristine)
+            {
+                foreach (var kv in _pristine) cache[kv.Key] = kv.Value;
+                _pristine.Clear();
+                foreach (var pack in packs)
+                {
+                    foreach (var t in pack.Tables)
+                    {
+                        if (t.Key == EVENT_TABLE) continue;
+                        if (!cache.TryGetValue(t.Key, out var raw))
+                        {
+                            Log.Warn("events", $"Pack {pack.FileName}: table {t.Key} does not exist in Resources, rows ignored");
+                            continue;
+                        }
+                        try
+                        {
+                            var merged = MergeRows(raw, t.Value);
+                            if (merged == raw) continue;
+                            if (!_pristine.ContainsKey(t.Key)) _pristine[t.Key] = raw;
+                            cache[t.Key] = Translation.TranslationManager.TranslateText(merged);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log.Error("events", $"Pack {pack.FileName}: could not merge {t.Key}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
+
+        // Adds rows that are not in the table yet.
+        private static string MergeRows(string raw, JToken rows)
+        {
+            if (IsJsonRowTable(raw))
+            {
+                var existing = ReadJsonRows(raw, out var wrap);
+                var output = new JArray(existing);
+                var seen = existing.Select(r => r.ToString(Formatting.None)).ToHashSet();
+                foreach (var r in (rows as JArray ?? new JArray()).OfType<JObject>())
+                    if (seen.Add(r.ToString(Formatting.None))) output.Add(r);
+                return output.Count == existing.Count ? raw : WriteJsonRows(output, wrap);
+            }
+            var pipe = ReadPipeRows(raw, out var pwrap).Select(r => string.Join("|", r)).ToList();
+            var have = pipe.ToHashSet();
+            var add = new List<string>();
+            if (rows.Type == JTokenType.String) add.AddRange(rows.ToString().Split('*'));
+            else if (rows is JArray arr) add.AddRange(arr.Select(x => x.Type == JTokenType.Array ? string.Join("|", x.Select(c => c.ToString())) : x.ToString()));
+            int before = pipe.Count;
+            foreach (var r in add) if (r.Length > 0 && have.Add(r)) pipe.Add(r);
+            return pipe.Count == before ? raw : WritePipeRows(pipe, pwrap);
         }
 
         // ---- selection ---------------------------------------------------
@@ -435,19 +513,6 @@ namespace Puniemu.Src.Server.Events
                     }
                     output.Add(copy);
                 }
-                foreach (var p in activePacks)
-                {
-                    var before = output.Count;
-                    AppendPackRows(output, p, table);
-                    for (int i = before; i < output.Count; i++)
-                    {
-                        if (output[i] is JObject m)
-                        {
-                            m["openDt"] = Format(start, "yyyy-MM-dd HH:mm:ss");
-                            m["closeDt"] = Format(end, "yyyy-MM-dd HH:mm:ss");
-                        }
-                    }
-                }
                 return WriteJsonRows(output, wrap);
             }
 
@@ -464,7 +529,6 @@ namespace Puniemu.Src.Server.Events
                     }
                 }
                 var outRows = rows.Select(r => string.Join("|", r)).ToList();
-                foreach (var p in activePacks) AppendPackPipeRows(outRows, p, table);
                 return WritePipeRows(outRows, wrap);
             }
 
@@ -484,7 +548,6 @@ namespace Puniemu.Src.Server.Events
                         }
                     }
                     var outRows = rows.Select(r => string.Join("|", r)).ToList();
-                    foreach (var p in activePacks) AppendPackPipeRows(outRows, p, table);
                     return WritePipeRows(outRows, wrap);
                 }
                 else
@@ -498,7 +561,6 @@ namespace Puniemu.Src.Server.Events
                         if (IsActive(id)) ShiftJsonDates(copy, start, end);
                         output.Add(copy);
                     }
-                    foreach (var p in activePacks) AppendPackRows(output, p, table);
                     return WriteJsonRows(output, wrap);
                 }
             }
@@ -511,20 +573,6 @@ namespace Puniemu.Src.Server.Events
         {
             if (!pack.Tables.TryGetValue(table, out var tok)) return;
             if (tok is JArray arr) foreach (var r in arr) output.Add(r.DeepClone());
-        }
-
-        private static void AppendPackPipeRows(List<string> rows, EventPack pack, string table)
-        {
-            if (!pack.Tables.TryGetValue(table, out var tok)) return;
-            if (tok.Type == JTokenType.String)
-            {
-                var s = tok.ToString();
-                if (!string.IsNullOrEmpty(s)) rows.AddRange(s.Split('*'));
-            }
-            else if (tok is JArray arr)
-            {
-                rows.AddRange(arr.Select(x => x.Type == JTokenType.Array ? string.Join("|", x.Select(c => c.ToString())) : x.ToString()));
-            }
         }
 
         private static void ShiftJsonDates(JObject row, DateTime start, DateTime end)

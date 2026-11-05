@@ -38,6 +38,22 @@ With an event selection active, the server rewrites what it sends to the client:
 The data in `Resources` is never modified. Players have to go back to the title screen to receive the
 new event data.
 
+## Importing old dumps
+
+`Tools/import_dumps.py` creates packs automatically from any number of old data dumps:
+
+```
+python Tools/import_dumps.py --current Resources --dumps path/to/extracted/dumps --out Events/imported
+```
+
+* `Events/imported/event_<id>.json` - one pack per event missing from `Resources`
+* `Events/imported/_missing_rows.json` - a data-only pack (`"eventId": 0`) with the rows of the other
+  tables (Yo-kai, stages, enemies, items...) that the dumps have and `Resources` doesn't
+* `Events/imported/report.txt` - what was found
+
+Pack rows are added to the game data at startup (so map warps and stages of imported maps work),
+but the maps stay closed until the event is selected. Sub folders of `Events/` are scanned too.
+
 ## Friendly names
 
 `names.json` lets you give events readable names:
@@ -77,7 +93,8 @@ an array of packs.
 * `mstEvent` - the `ywp_mst_event` row. Copy a real row from your data and change the ids; if it is
   left out a row is generated from an existing one.
 * `gachaIds` - gachas whose start/end dates are opened while the event is on.
-* `tables` - extra rows served only while the event is on. JSON tables take an array of rows,
+* `tables` - extra master rows for the event (maps, stages, quests...). They are added to the game
+  data; maps stay closed while the event is not selected. JSON tables take an array of rows,
   pipe tables (`tableData`) take the rows as a `|` / `*` string. The table must exist in `Resources`.
 
 After adding or editing packs press **Rescan data** in the admin panel (or restart the server).

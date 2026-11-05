@@ -114,6 +114,14 @@ namespace Puniemu.Src.Server.Translation
             RemainingJapaneseCells = remaining;
         }
 
+        // Translates one table's text (used for tables added after startup, e.g. by event packs).
+        public static string TranslateText(string raw)
+        {
+            if (!Enabled || LoadedEntries == 0 || string.IsNullOrEmpty(raw) || !JAPANESE.IsMatch(raw)) return raw;
+            int a = 0, b = 0;
+            return TranslateTableText(raw, ref a, ref b);
+        }
+
         private static string TranslateTableText(string raw, ref int translated, ref int remaining)
         {
             var t = raw.TrimStart();
