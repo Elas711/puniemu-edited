@@ -83,6 +83,14 @@ def index_rows(kind, rows):
     return idx
 
 
+def same_layout(a, b):
+    n = min(len(a), len(b))
+    nums = [(x, y) for x, y in zip(a[:n], b[:n]) if x.isdigit() or y.isdigit()]
+    if len(nums) < 3:
+        return False
+    return sum(1 for x, y in nums if x == y) / len(nums) >= 0.7
+
+
 def table_files(folder):
     out = {}
     for name in os.listdir(folder):
@@ -119,7 +127,9 @@ def cmd_build(args):
                             votes[jv][ev] += 1
                             pairs_here += 1
                 else:
-                    if len(jr) != len(er):
+                    # Newer versions often add columns at the end: compare the shared columns, but
+                    # only when the numeric cells agree (same row layout)
+                    if len(jr) != len(er) and not same_layout(jr, er):
                         continue
                     for jv, ev in zip(jr, er):
                         if has_jp(jv) and ev.strip() and not has_jp(ev):

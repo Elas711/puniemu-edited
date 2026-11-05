@@ -32,4 +32,17 @@ python Tools/build_translation.py stats --jp Resources --translations Translatio
 ```
 
 `|` and `*` are table separators and are removed from translations automatically.
-`common.json` is a small hand-made starter dictionary (main characters and tribes).
+Files shipped in `Translations/en/`:
+
+* `common.json` - small hand-made starter dictionary (main characters, tribes, UI words),
+* `names.fandom.json` - about 3,900 Japanese -> English Yo-kai / character / item names from the
+  [Yo-kai Watch Fandom wiki](https://yokaiwatch.fandom.com) (CC BY-SA 3.0). Refresh it with
+  `python Tools/fetch_fandom_names.py --out Translations/en/names.fandom.json`,
+* `patterns.json` - rules for numbered texts: stage names, star conditions, missions...
+
+Files are loaded in alphabetical order and later files win, so a `strings.generated.json` built
+from the official Wibble Wobble text overrides the Fandom names where both exist.
+
+Result on the live Puni Puni 4.177.0 data with a dictionary generated from Wibble Wobble:
+about 87,000 of 178,000 Japanese texts are shown in English, including every stage / star condition
+pattern and about 2,400 of the 4,300 Yo-kai names.

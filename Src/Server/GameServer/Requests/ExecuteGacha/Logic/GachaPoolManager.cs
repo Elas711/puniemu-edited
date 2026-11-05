@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Puniemu.Src.Server.GameServer.DataClasses;
 using Puniemu.Src.Server.GameServer.DataClasses.Mission;
 using Puniemu.Src.Server.GameServer.Logic;
@@ -47,6 +47,44 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
         }
 
 
+
+        private static readonly ConcurrentDictionary<int, int> _fallback = new();
+
+        // gacha_pool rarely covers every crank-a-kai of a newer data set (the live Puni Puni data has
+        // hundreds). A machine without its own pool borrows the pool of a machine that costs the
+        // same coin/currency, otherwise the largest pool, instead of failing with "No pool data".
+        // Returns -1 when there is no pool at all.
+        public static int ResolvePoolId(int gachaId)
+        {
+            EnsureLoaded();
+            if (Gachas.ContainsKey(gachaId)) return gachaId;
+            if (Gachas.Count == 0) return -1;
+            return _fallback.GetOrAdd(gachaId, id =>
+            {
+                int chosen = -1;
+                try
+                {
+                    var tbl = new TableParser.Logic.TableParser(JsonConvert.DeserializeObject<Dictionary<string, string>>(
+                        DataManager.Logic.DataManager.GameDataManager.GamedataCache["ywp_mst_gacha"])!["tableData"]);
+                    string? Price(int gid)
+                    {
+                        var row = tbl.Table.FirstOrDefault(r => r.Length > 4 && r[0] == gid.ToString());
+                        return row == null ? null : row[3] + ":" + row[4];
+                    }
+                    var price = Price(id);
+                    if (price != null)
+                        chosen = Gachas.Keys.FirstOrDefault(k => Price(k) == price, -1);
+                }
+                catch
+                {
+                    // fall through to the largest pool
+                }
+                if (chosen == -1)
+                    chosen = Gachas.OrderByDescending(kv => kv.Value.Yokais?.Values.Sum(l => l.Count) ?? 0).First().Key;
+                Puniemu.Src.Server.Infrastructure.Log.Warn("gacha", $"No pool for crank-a-kai {id} in gacha_pool, using the pool of {chosen}");
+                return chosen;
+            });
+        }
 
         public static async Task<GachaPrize> RegisterYokaiAndGetPrize(long yokaiId, CapsuleColor capsule, RarityType rank,
             TableParser<YwpUserYoukai> userYokaiTable, TableParser<YwpUserYoukaiSkill> userSkillTable, TableParser<YwpUserDictionary> dictionaryListTable,

@@ -43,6 +43,7 @@ namespace Puniemu.Src.Server.Web.Wiki
             public List<string> Stars = new();
             public List<string> Enemies = new(); // Yo-kai ids
             public string Unlock = "";
+            public long UnlockFrom;
         }
 
         public Dictionary<string, Yokai> YokaiById = new();
@@ -143,22 +144,45 @@ namespace Puniemu.Src.Server.Web.Wiki
 
             // Star / unlock conditions
             var cond = new Dictionary<long, string>();
-            var unlocks = new Dictionary<long, string>();
-            foreach (var c in Json("ywp_mst_stage_condition"))
+            var unlocks = new Dictionary<long, (string text, long origin)>();
+            void AddCondition(long id, string d, long originStage, string open)
             {
-                var id = c.Value<long?>("conditionId") ?? 0;
-                var d = Clean(c.Value<string>("description") ?? "");
                 cond[id] = d;
-                var open = c.Value<string>("openStageIdList") ?? "";
-                foreach (var s in open.Split(new[] { ',', '|', ' ' }, StringSplitOptions.RemoveEmptyEntries))
-                    if (long.TryParse(s, out var sid)) unlocks[sid] = d;
+                foreach (var s in open.Split(new[] { ',', '|', ' ', ':' }, StringSplitOptions.RemoveEmptyEntries))
+                    if (long.TryParse(s, out var sid)) unlocks[sid] = (d, originStage);
+            }
+            // WibWob: JSON rows. Puni (official format): id ^ type ^ text ^ val1 ^ val2 ^ val3 ^ openStageIdList
+            foreach (var c in Json("ywp_mst_stage_condition"))
+                AddCondition(c.Value<long?>("conditionId") ?? 0, Clean(c.Value<string>("description") ?? ""),
+                    c.Value<long?>("conditionVal1") ?? 0, c.Value<string>("openStageIdList") ?? "");
+            {
+                var cache = DataManager.Logic.DataManager.GameDataManager.GamedataCache;
+                if (cache.TryGetValue("ywp_mst_stage_condition", out var condRaw) && condRaw.TrimStart().StartsWith("{"))
+                {
+                    try
+                    {
+                        var td = JObject.Parse(condRaw)["tableData"]?.ToString();
+                        if (td != null)
+                            foreach (var row in td.Split('*'))
+                            {
+                                var r = row.Split('^');
+                                if (r.Length < 3 || !long.TryParse(r[0], out var cid)) continue;
+                                long.TryParse(r.Length > 3 ? r[3] : "0", out var v1);
+                                AddCondition(cid, Clean(r[2]), v1, r.Length > 6 ? r[6] : "");
+                            }
+                    }
+                    catch { }
+                }
             }
 
             // Maps and stages
             w.Maps = Json("ywp_mst_map").OrderBy(m => m.Value<int?>("mapType") ?? 0).ThenBy(m => m.Value<int?>("sort") ?? 0).ToList();
+            // Stages come as JSON rows (WibWob) or in the official pipe format (Puni):
+            // id | map | name | type | no | first | boss | spirits | star1 | star2 | star3 | ? | enemySet | ? | bg | next | hide | recommendLv
+            var stageRows = new List<(Stage st, long[] stars, string enemySet)>();
             foreach (var s in Json("ywp_mst_stage"))
             {
-                var st = new Stage
+                stageRows.Add((new Stage
                 {
                     Id = s.Value<long?>("stageId") ?? 0,
                     MapId = s.Value<long?>("mapId") ?? 0,
@@ -167,11 +191,33 @@ namespace Puniemu.Src.Server.Web.Wiki
                     Boss = (s.Value<int?>("bossFlg") ?? 0) != 0,
                     Hidden = !string.IsNullOrEmpty(s.Value<string>("hideStageRelationCode")),
                     RecommendLevel = s.Value<int?>("recommendLevel") ?? 0
-                };
-                foreach (var k in new[] { "starGetConditionId1", "starGetConditionId2", "starGetConditionId3" })
-                    if (cond.TryGetValue(s.Value<long?>(k) ?? 0, out var d) && d.Length > 0) st.Stars.Add(d);
-                if (setToYokai.TryGetValue((s.Value<long?>("enemySetId") ?? 0).ToString(), out var en)) st.Enemies = en;
-                if (unlocks.TryGetValue(st.Id, out var u)) { st.Unlock = u; st.Hidden = true; }
+                }, new[] { s.Value<long?>("starGetConditionId1") ?? 0, s.Value<long?>("starGetConditionId2") ?? 0, s.Value<long?>("starGetConditionId3") ?? 0 },
+                (s.Value<long?>("enemySetId") ?? 0).ToString()));
+            }
+            if (stageRows.Count == 0)
+            {
+                foreach (var r in Pipe("ywp_mst_stage"))
+                {
+                    if (r.Length < 13 || !long.TryParse(r[0], out var sid)) continue;
+                    long.TryParse(r[1], out var mid);
+                    stageRows.Add((new Stage
+                    {
+                        Id = sid, MapId = mid, No = Int(r, 4), Name = Clean(r[2]), Boss = Int(r, 6) != 0,
+                        Hidden = Str(r, 16).Length > 0, RecommendLevel = Int(r, 17)
+                    }, new[] { long.TryParse(r[8], out var a) ? a : 0, long.TryParse(r[9], out var b) ? b : 0, long.TryParse(r[10], out var c) ? c : 0 }, r[12]));
+                }
+            }
+            foreach (var (st, stars, enemySet) in stageRows)
+            {
+                foreach (var cid in stars)
+                    if (cond.TryGetValue(cid, out var d) && d.Length > 0) st.Stars.Add(d);
+                if (setToYokai.TryGetValue(enemySet, out var en)) st.Enemies = en;
+                if (unlocks.TryGetValue(st.Id, out var u))
+                {
+                    st.Hidden = true;
+                    st.UnlockFrom = u.origin;
+                    st.Unlock = u.text;
+                }
                 if (st.MapId == 0) continue;
                 if (!w.StagesByMap.TryGetValue(st.MapId, out var l)) w.StagesByMap[st.MapId] = l = new List<Stage>();
                 l.Add(st);
@@ -182,6 +228,10 @@ namespace Puniemu.Src.Server.Web.Wiki
                     if (sl.Count < 40) sl.Add(st.Id);
                 }
             }
+            // "Opens from stage X": name the stage the hidden route starts at
+            foreach (var st in w.StageById.Values)
+                if (st.UnlockFrom != 0 && w.StageById.TryGetValue(st.UnlockFrom, out var from))
+                    st.Unlock = $"Found on {(from.Name.Length > 0 ? from.Name : "Stage " + from.No)}" + (st.Unlock.Length > 0 ? $" ({st.Unlock})" : "");
             foreach (var l in w.StagesByMap.Values) l.Sort((a, b) => a.No != b.No ? a.No.CompareTo(b.No) : a.Id.CompareTo(b.Id));
 
             // Hidden stage hints from Puniemu's stage_data (locked_stage)

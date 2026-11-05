@@ -36,7 +36,9 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
             var deserialized = JsonConvert.DeserializeObject<ExecuteGachaRequest>(requestJsonString!);
 
             GachaPoolManager.EnsureLoaded();
-            if(!GachaPoolManager.Gachas.ContainsKey(deserialized.GachaId))
+            // machines without their own pool borrow a matching one (see ResolvePoolId)
+            int poolId = GachaPoolManager.ResolvePoolId(deserialized!.GachaId);
+            if (poolId < 0)
             {
                 var errSession = new MsgBoxResponse($"No pool data exists for:\ngachaId:{deserialized!.GachaId}", "Error");
                 await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(errSession)));
@@ -92,7 +94,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
             {
                 if ((userData.YMoney - priceNum) < 0)
                 {
-                    var errSession = new MsgBoxResponse("Error occured", "Error");
+                    var errSession = new MsgBoxResponse($"Not enough Y-Money.\nThis costs {priceNum} Y-Money.", "Crank-a-kai");
                     await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(errSession)));
                     return;
                 }
@@ -132,7 +134,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
                     }
                     if ((number - priceNum) < 0)
                     {
-                        var errSession = new MsgBoxResponse("Error occured", "Error");
+                        var errSession = new MsgBoxResponse($"You don't have enough coins\nfor this Crank-a-kai ({number}/{priceNum}).", "Crank-a-kai");
                         await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(errSession)));
                         return;
                     }
@@ -142,7 +144,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
                     number = userItemtable.Items.FirstOrDefault(x => x.ItemId == priceId)?.Count ?? 0;
                     if ((number - priceNum) < 0)
                     {
-                        var errSession = new MsgBoxResponse("Error occured", "Error");
+                        var errSession = new MsgBoxResponse($"You don't have enough coins\nfor this Crank-a-kai ({number}/{priceNum}).", "Crank-a-kai");
                         await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(errSession)));
                         return;
                     }
@@ -165,7 +167,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
                 if (DataManager.Logic.DataManager.IsWibWob) mode = GachaMaxedYokaiMode.RerollUntilValid;
                 for (int i = 0; i < pullCount; i++)
                 {
-                    prizes.Add(await GachaPoolManager.CrankReward(gachaId, userYokaiTable, userSkillTable, dictionaryListTable, userItemtable, userBonus, deserialized.Level5UserId, mode));
+                    prizes.Add(await GachaPoolManager.CrankReward(poolId, userYokaiTable, userSkillTable, dictionaryListTable, userItemtable, userBonus, deserialized.Level5UserId, mode));
                 }
             }
             
@@ -181,7 +183,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
                 }
                 var rarity = mstYokai.Items[ykIdx].YoukaiRarity;
                 prizes.Add(await GachaPoolManager.RegisterYokaiAndGetPrize(deserialized.RequestYoukaiId, CapsuleColor.Red, rarity, 
-                    userYokaiTable, userSkillTable, dictionaryListTable, userItemtable, gachaId, userBonus, deserialized.Level5UserId));
+                    userYokaiTable, userSkillTable, dictionaryListTable, userItemtable, poolId, userBonus, deserialized.Level5UserId));
                 pullCount = 1;
             }
             else

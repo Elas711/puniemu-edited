@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Puniemu.Src.Server.GameServer.Requests.UserInfoRefresh.DataClasses;
 using Puniemu.Src.Server.GameServer.DataClasses;
 using System.Text;
@@ -28,11 +28,12 @@ namespace Puniemu.Src.Server.GameServer.Requests.UserInfoRefresh.Logic
             try
             {
                 userData = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<YwpUserData>(deserialized.Level5UserID, "ywp_user_data");
+                if (userData == null) throw new KeyNotFoundException();
                 userInfoRefreshResponse = new UserInfoRefreshResponse(userData!);
                 // Convert struct into dict (because the response can have different number of ywp_user table)
                 var userInfoRefreshDict = userInfoRefreshResponse.ToDictionary();
                 // add requested table in the response
-                foreach (var item in deserialized.RequestedTab)
+                foreach (var item in deserialized.RequestedTab ?? Enumerable.Empty<string>())
                 {
                     try
                     {

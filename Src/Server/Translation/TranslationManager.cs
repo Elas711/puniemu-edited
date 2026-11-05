@@ -21,6 +21,7 @@ namespace Puniemu.Src.Server.Translation
         private static Dictionary<string, string> _exact = new();
         private static List<KeyValuePair<string, string>> _phrases = new();
         private static List<KeyValuePair<Regex, string>> _patterns = new();
+        [ThreadStatic] private static int _patternDepth;
 
         public static int LoadedEntries => _exact.Count + _phrases.Count + _patterns.Count;
         public static int TranslatedCells { get; private set; }
@@ -108,7 +109,13 @@ namespace Puniemu.Src.Server.Translation
                         for (int g = m.Groups.Count - 1; g >= 1; g--)
                         {
                             var part = m.Groups[g].Value;
-                            if (_exact.TryGetValue(part, out var tp)) part = tp;
+                            // captured parts go through the dictionaries and patterns again ("【スコア35000以上】")
+                            if (_patternDepth < 3)
+                            {
+                                _patternDepth++;
+                                try { part = Translate(part, out _); }
+                                finally { _patternDepth--; }
+                            }
                             repl = repl.Replace("$" + g, part);
                         }
                         result = repl;
@@ -226,7 +233,9 @@ namespace Puniemu.Src.Server.Translation
             for (int r = 0; r < rows.Length; r++)
             {
                 if (!JAPANESE.IsMatch(rows[r])) continue;
-                var cells = rows[r].Split('|');
+                // Most tables separate cells with |, a few (ywp_mst_stage_condition) with ^
+                char sep = rows[r].Contains('|') || !rows[r].Contains('^') ? '|' : '^';
+                var cells = rows[r].Split(sep);
                 bool rowChanged = false;
                 for (int c = 0; c < cells.Length; c++)
                 {
@@ -235,7 +244,7 @@ namespace Puniemu.Src.Server.Translation
                     if (changed) { cells[c] = nc; rowChanged = true; translated++; }
                     if (JAPANESE.IsMatch(nc)) remaining++;
                 }
-                if (rowChanged) { rows[r] = string.Join("|", cells); any = true; }
+                if (rowChanged) { rows[r] = string.Join(sep, cells); any = true; }
             }
             return any ? string.Join("*", rows) : text;
         }
