@@ -60,3 +60,22 @@ redirected name, and serve the data download from the same server (`ServeDataDow
 Then start the game. Requests Puniemu does not implement yet are listed in the admin panel
 (Logs -> Unimplemented requests) with their decrypted body - that is how the missing calls of
 docs/CLIENT_ENDPOINTS.md can be filled in.
+
+## Real phone (no root): patched APK
+
+`Tools/patch_apk.py` changes one file of your own APK, the network security config, so the game
+also trusts user-installed CAs (and allows plain HTTP), then signs all split APKs with one key:
+
+```
+python Tools/patch_apk.py "Yo-kai Watch Puni Puni.apks" --out patched
+adb uninstall com.Level5.YWP          # the store version has another signature (deletes local data!)
+adb install-multiple patched/*.apk
+```
+
+On the phone: install `certs/ca.pem` as a CA certificate (Settings -> Security -> Encryption &
+credentials -> Install a certificate -> CA certificate) and point the game's host names at your
+server with a DNS you control (Pi-hole, your router, or a local DNS app).
+
+Verified here: the four split APKs are signed with the same key (v1/v2/v3), zip-aligned, the 16
+native libraries stay uncompressed and page-aligned, and only `res/xml/network_security_config.xml`
+differs from the original. Not verified: whether the game's protection accepts a re-signed APK.

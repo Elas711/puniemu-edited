@@ -435,3 +435,4 @@ Translations/*/untranslated.json
 
 # Replacement asset files (game assets, not committed)
 AssetOverlay/
+Tools/.cache/
