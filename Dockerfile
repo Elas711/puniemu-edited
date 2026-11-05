@@ -11,7 +11,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
 # Game data and assets are mounted at runtime (see docker-compose.yml), so the image contains no game files.
-ENV ASPNETCORE_URLS=http://+:8080 \
+ENV PORT=8080 \
     PUNIEMU_RESOURCES_PATH=/app/Resources \
     ServerStatePath=/app/state/server_state.json
 EXPOSE 8080

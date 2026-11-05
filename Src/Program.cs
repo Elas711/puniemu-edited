@@ -76,6 +76,13 @@ class Program
     static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        // Hosting platforms such as Render, Railway, Fly.io or Heroku pass the port in $PORT
+        var platformPort = Environment.GetEnvironmentVariable("PORT");
+        if (!string.IsNullOrEmpty(platformPort) && int.TryParse(platformPort, out _) &&
+            string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+        {
+            builder.WebHost.UseUrls($"http://0.0.0.0:{platformPort}");
+        }
 
         //Add the config to DataManager so it can be used globally
         DataManager.Logic.DataManager.ContentRoot = builder.Environment.ContentRootPath;

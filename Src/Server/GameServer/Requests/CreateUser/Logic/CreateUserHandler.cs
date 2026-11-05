@@ -155,7 +155,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.CreateUser.Logic
             Dictionary<string,object?> tables = new Dictionary<string,object?>();
             await CreateSave(tables, generatedUserData, gdkey);
 
-            tables["opening_tutorial_flg"] = false;
+            tables["opening_tutorial_flg"] = DataManager.Logic.DataManager.SkipOpeningTutorial;
             foreach (var userTable in Consts.LOGIN_TABLES_PUNI.Where(x => x.Contains("ywp_user") && x != "ywp_user_data"))
             {
                 //initialize with default if exists, else 

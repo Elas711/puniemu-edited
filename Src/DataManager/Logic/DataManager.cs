@@ -86,6 +86,9 @@ namespace Puniemu.Src.DataManager.Logic
         // Trust X-Forwarded-For / X-Forwarded-Proto (only enable behind a reverse proxy you control).
         public static bool TrustProxyHeaders { get; private set; } = false;
 
+        // New saves skip the opening tutorial (from the Washaaaan fork).
+        public static bool SkipOpeningTutorial { get; private set; } = false;
+
         // Maximum saves that can be created from a single device.
         public static int MaxGdkeysPerDevice { get; private set; } = 3;
 
@@ -129,6 +132,7 @@ namespace Puniemu.Src.DataManager.Logic
             AccountOwnershipMode = GetString(config, "AccountOwnershipMode", AccountOwnershipMode).ToLowerInvariant();
             RateLimitPerMinute = int.TryParse(config["RateLimitPerMinute"], out var rl) ? rl : RateLimitPerMinute;
             TrustProxyHeaders = GetBool(config, "TrustProxyHeaders", false);
+            SkipOpeningTutorial = GetBool(config, "SkipOpeningTutorial", false);
             MaxGdkeysPerDevice = int.TryParse(config["MaxGdkeysPerDevice"], out var mg) && mg > 0 ? mg : MaxGdkeysPerDevice;
 
             // If no external data download host was configured but a public URL was, point the

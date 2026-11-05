@@ -76,9 +76,16 @@ namespace Puniemu.Src.Server.Web
 
                 // Fallback: the client sometimes requests assets with a path layout that differs from the
                 // folder structure on disk, so index every file by name and serve by file name.
+                // The same file name exists in several version folders (1.0.0/20160120/x.png,
+                // 4.0.6/20260714/x.png...): keep the newest copy, not whichever is found first.
                 _fileIndex = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                var ddRoot = Path.GetFullPath(dd).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
                 foreach (var file in Directory.EnumerateFiles(dd, "*", SearchOption.AllDirectories))
-                    _fileIndex.TryAdd(Path.GetFileName(file), file);
+                {
+                    var name = Path.GetFileName(file);
+                    if (!_fileIndex.TryGetValue(name, out var existing) || CompareVersionPaths(ddRoot, file, existing) > 0)
+                        _fileIndex[name] = file;
+                }
                 Log.Info("download", $"Serving {_fileIndex.Count} data download files from {dd}");
 
                 app.Use(async (ctx, next) =>
@@ -87,8 +94,19 @@ namespace Puniemu.Src.Server.Web
                     if (_fileIndex != null && HttpMethods.IsGet(ctx.Request.Method) && path != null &&
                         !path.Contains(".nhn") && !path.StartsWith("/admin") && !path.StartsWith("/web/"))
                     {
+                        // 1. exact location (e.g. /eal/4.0.6/20260714/file.png -> dataDownload/4.0.6/20260714/file.png)
+                        string? full = null;
+                        var rel = path.Trim('/');
+                        foreach (var prefix in new[] { "eal/", "dataDownload/" })
+                            if (rel.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) { rel = rel.Substring(prefix.Length); break; }
+                        if (rel.Length > 0)
+                        {
+                            var candidate = Path.GetFullPath(Path.Combine(ddRoot, rel));
+                            if (candidate.StartsWith(ddRoot, StringComparison.Ordinal) && File.Exists(candidate)) full = candidate;
+                        }
+                        // 2. by file name (newest copy)
                         var name = Path.GetFileName(path.TrimEnd('/'));
-                        if (name.Length > 0 && _fileIndex.TryGetValue(name, out var full))
+                        if (full != null || (name.Length > 0 && _fileIndex.TryGetValue(name, out full)))
                         {
                             if (!provider.TryGetContentType(full, out var ct)) ct = "application/octet-stream";
                             ctx.Response.ContentType = ct;
@@ -115,6 +133,23 @@ namespace Puniemu.Src.Server.Web
                     ContentTypeProvider = provider
                 });
             }
+        }
+
+        // Orders two copies of a file by the version folders they are in (app version, then date).
+        private static int CompareVersionPaths(string root, string a, string b)
+        {
+            static (Version, long, string) Key(string root, string p)
+            {
+                var parts = Path.GetRelativePath(root, p).Split(Path.DirectorySeparatorChar);
+                var v = parts.Length > 1 && Version.TryParse(parts[0], out var ver) ? ver : new Version(0, 0);
+                var d = parts.Length > 2 && long.TryParse(parts[1], out var date) ? date : 0;
+                return (v, d, p);
+            }
+            var ka = Key(root, a); var kb = Key(root, b);
+            int c = ka.Item1.CompareTo(kb.Item1);
+            if (c != 0) return c;
+            c = ka.Item2.CompareTo(kb.Item2);
+            return c != 0 ? c : string.CompareOrdinal(ka.Item3, kb.Item3);
         }
 
         // help.html ships with the data download; look in the usual places.

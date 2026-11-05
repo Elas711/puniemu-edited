@@ -1,0 +1,24 @@
+# Render.com blueprint (idea from the Washaaaan fork). Copy to the repository root as render.yaml.
+# Game data (Resources/) must be baked into the image or mounted on a disk.
+services:
+  - type: web
+    name: puniemu
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: starter
+    healthCheckPath: /healthz
+    envVars:
+      - key: PostgresConnectionString
+        sync: false
+      - key: IsWibWob
+        value: "false"
+      - key: GameVersion
+        value: "4.0.6"
+      - key: ServerName
+        value: "Puniemu"
+      - key: PublicServerURL
+        sync: false
+      - key: AdminToken
+        generateValue: true
+      - key: TrustProxyHeaders
+        value: "true"

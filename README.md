@@ -82,7 +82,9 @@ docker compose up -d --build
 ```
 
 `docker-compose.yml` starts PostgreSQL and Puniemu and mounts `./Resources`, `./wwwroot`,
-`./Events` and `./Translations`. A Pterodactyl/Pelican egg is in `deploy/egg-puniemu.json`.
+`./Events` and `./Translations`. A Pterodactyl/Pelican egg is in `deploy/egg-puniemu.json` and a
+Render.com blueprint in `deploy/render.yaml`. Hosting platforms that pass the port in `$PORT`
+(Render, Railway, Fly.io, Heroku) are supported automatically.
 
 ---
 
@@ -208,8 +210,9 @@ Runtime settings are stored in `server_state.json`. The API behind the panel is 
 ### Data download
 
 If `wwwroot/` or the folder in `DataDownloadPath` exists, Puniemu serves the game's asset files
-itself (with the right content types for `.ez`, `.m4`, `.ayd`, ...). Files are also found by file
-name, so the folder layout doesn't have to match the request paths exactly. If `DataDownloadURL` is
+itself (with the right content types for `.ez`, `.m4`, `.ayd`, ...). Requests are matched to the exact
+file first (`/dataDownload/...` and `/eal/...`); if that fails, by file name, using the newest version
+folder when a file exists in several versions. If `DataDownloadURL` is
 empty, it defaults to `PublicServerURL + /dataDownload/`.
 
 ### Gameplay
@@ -278,6 +281,7 @@ All keys are optional except `PostgresConnectionString` and `IsWibWob`.
 | `RateLimitPerMinute` | `900` | per IP, `0` = off |
 | `TrustProxyHeaders` | `false` | trust `X-Forwarded-*` (only behind your own proxy) |
 | `MaxGdkeysPerDevice` | `3` | saves per device |
+| `SkipOpeningTutorial` | `false` | new saves skip the opening tutorial |
 | `MaxConnections` / `MaxCachedAccounts` | `1500` / `2000` | capacity limits |
 | `LogRequests` | `false` | print every decrypted request (debugging) |
 | `EmailForAuthMessages` / `AppPasswordForAuthMessages` | `""` | Gmail account used to send account link codes |
@@ -304,7 +308,8 @@ Community forks this edition takes features and fixes from:
 - **marlonnblox-netizen** - HSP launching info endpoint, forwarded headers
 - **WibWobPS (hxgohxrr)** - the wwps port: launching template, security hardening, admin tooling and
   dashboard ideas, and the list of server bugs it documented
-- **AndroidAbuse**, **Julian52575**, **Washaaaan** - Docker setups, data download serving
+- **AndroidAbuse**, **Julian52575** - Docker setups
+- **Washaaaan** - data download serving, Render deployment, skipping the opening tutorial
 - **eliasderzocker** - Pterodactyl egg
 - **Rorosak** - FoodType enum
 - **Amumis** - Wibble Wobble server guide
