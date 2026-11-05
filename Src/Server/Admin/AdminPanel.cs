@@ -327,6 +327,16 @@ namespace Puniemu.Src.Server.Admin
                 await ctx.Response.WriteAsync(TranslationManager.ExportUntranslatedJson());
             });
 
+            // Requests the server does not implement, as a real client sent them (see DefaultHandler)
+            Api(app, "GET", "/admin/api/unimplemented", async ctx =>
+            {
+                await Task.CompletedTask;
+                return Puniemu.Src.Server.GameServer.Requests.DefaultHandler.Logic.DefaultHandler.RecordedRequests.Select(r => new
+                {
+                    endpoint = r.Endpoint, count = r.Count, acknowledged = r.Acknowledged, last = r.Last, samples = r.Samples
+                });
+            });
+
             Api(app, "GET", "/admin/api/logs", async ctx =>
             {
                 await Task.CompletedTask;

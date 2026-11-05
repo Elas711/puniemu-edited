@@ -83,7 +83,8 @@ pre{white-space:pre-wrap;font-size:12px;max-height:520px;overflow:auto;margin:0}
 <div class=""card""><h2>Translation</h2><p class=""muted"" id=""tstat""></p>
 <div class=""row""><button class=""ghost"" id=""tdl"">Download untranslated texts</button><span class=""muted"">Translate them by hand or with Tools/machine_translate.py, put the file in Translations/&lt;language&gt;/ and restart.</span></div></div></section>
 
-<section id=""t-logs"" class=""hidden""><div class=""card""><h2>Recent server log</h2><pre id=""logs""></pre></div></section>
+<section id=""t-logs"" class=""hidden""><div class=""card""><h2>Unimplemented requests</h2><p class=""muted"">Requests the game sent that Puniemu does not implement yet (decrypted, last 3 per endpoint, kept until restart). ""acknowledged"" ones get a plain success answer.</p><div id=""unimpl""></div></div>
+<div class=""card""><h2>Recent server log</h2><pre id=""logs""></pre></div></section>
 </main><div id=""toast""></div>
 <script>
 var T=sessionStorage.getItem('pt')||'';document.getElementById('token').value=T;
@@ -119,6 +120,8 @@ function load(t){
   $('eplayer').checked=s.allowPlayerChoice;$('ehide').checked=s.hideInactiveEventMaps;$('edays').value=s.eventDurationDays;$('rdays').value=s.rotationDays;$('rcount').value=s.rotationCount;
   loadHistory();$('enow').textContent=e.runningNow?'Running now: '+e.runningNow.join(', '):'Running now: original data';renderEvents();}).catch(fail);
  if(t==='logs')api('GET','/admin/api/logs').then(function(l){$('logs').textContent=l.slice().reverse().join('\n');}).catch(fail);
+ if(t==='logs')api('GET','/admin/api/unimplemented').then(function(u){$('unimpl').innerHTML=u.length?u.map(function(r){return '<details><summary><b>'+esc(r.endpoint)+'</b> &middot; '+r.count+'x'+(r.acknowledged?' <span class=""muted"">(acknowledged)</span>':'')+'</summary>'+
+  r.samples.map(function(x){return '<pre>'+esc(x)+'</pre>';}).join('')+'</details>';}).join(''):'<p class=""muted"">None so far.</p>';}).catch(fail);
 }
 function renderEvents(){var f=$('efilter').value.toLowerCase(),on={};EV.settings.activeEventIds.forEach(function(i){on[i]=1;});
  $('elist').innerHTML='<tr><th></th><th>ID</th><th>Name</th><th>Period</th><th>Maps</th><th>Source</th><th>Tables</th></tr>'+EV.catalog.filter(function(e){return (e.name+' '+e.eventId).toLowerCase().indexOf(f)>=0;}).map(function(e){

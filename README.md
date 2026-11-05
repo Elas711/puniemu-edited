@@ -116,7 +116,12 @@ For a public server put a reverse proxy with TLS in front of Puniemu (and set
 ### Puni Puni
 
 Same idea (server URL + launching zone), plus the protections of the Japanese client. Not covered
-here.
+here: in the 4.177.0 client the game server's host name is not stored as plain text anywhere (it
+is built at run time inside `libSGF.so`), so it cannot simply be replaced.
+
+[docs/CLIENT_ENDPOINTS.md](docs/CLIENT_ENDPOINTS.md) lists all 164 endpoints the 4.177.0 client
+knows and which ones Puniemu answers. Requests to the others are recorded with their decrypted body
+(admin panel -> Logs -> Unimplemented requests), so they can be implemented from real traffic.
 
 ---
 
