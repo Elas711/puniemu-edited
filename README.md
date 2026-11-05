@@ -119,6 +119,9 @@ Same idea (server URL + launching zone), plus the protections of the Japanese cl
 here: in the 4.177.0 client the game server's host name is not stored as plain text anywhere (it
 is built at run time inside `libSGF.so`), so it cannot simply be replaced.
 
+[docs/ARCHIVES.md](docs/ARCHIVES.md) lists where old game data survives (archive.org uploads of
+event caches, Wibble Wobble server data...) and how to get it.
+
 [docs/CLIENT_ENDPOINTS.md](docs/CLIENT_ENDPOINTS.md) lists all 164 endpoints the 4.177.0 client
 knows and which ones Puniemu answers. Requests to the others are recorded with their decrypted body
 (admin panel -> Logs -> Unimplemented requests), so they can be implemented from real traffic.
@@ -234,7 +237,15 @@ Pictures come from the data download (`bl_<id>.png` and similar), so they appear
 
 ### Crank-a-kai: every machine, coins and mixes
 
-Every crank-a-kai of the master data works (338 on the live 4.177.0 data). The official servers keep
+Every crank-a-kai of the master data works (338 on the live 4.177.0 data). Real pools: Japan requires gacha
+games to publish their odds, and `Tools/fetch_gacha_rates.py` reads Puni Puni's official odds pages
+(one per coin, linked from `ywp_mst_coin_purchase_master`) into `gacha_pool.txt` - every Yo-kai with
+its exact chance (41 pages / 42 machines on 4.177.0; the "pick a Yo-kai" coins have no odds page):
+
+```
+python Tools/fetch_gacha_rates.py --resources Resources --out Resources/gacha_pool.txt --merge
+```
+ The official servers keep
 the drop pools to themselves, so a machine without a captured pool (`gacha_pool.txt`) gets a lineup
 rebuilt from the master data: its "pick a Yo-kai" list (`ywp_mst_gacha_youkai_choice`) where it has
 one, otherwise the Yo-kai released in the three weeks after the machine came out (the Monster Strike
