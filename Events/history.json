@@ -4296,6 +4296,13 @@
      ]
     },
     {
+     "name": "Fire Force",
+     "eventIds": [
+      1335
+     ],
+     "notes": "Collab with Fire Force (Shinra Kusakabe...). Identified from the characters in the live 4.177.0 data."
+    },
+    {
      "name": "Frieren",
      "eventIds": [],
      "driveFolder": "https://drive.google.com/drive/folders/1W3kl-rz4gnvF0VsTNH_Ggazv_dRg6rFB",
@@ -5900,6 +5907,16 @@
      ]
     },
     {
+     "name": "Rent-A-Girlfriend",
+     "eventIds": [
+      1287
+     ],
+     "notes": "Mini collab with Rent-A-Girlfriend, together with the \"Commotion at the Leisure Land\" event (client 4.172.0, archive.org event cache).",
+     "dates": [
+      "2026/08/17"
+     ]
+    },
+    {
      "name": "Shaman King",
      "eventIds": [],
      "driveFolder": "https://drive.google.com/drive/folders/1iq_xukA-nSBjnCsC-ESOs13Osp_qCHEg",
@@ -6303,6 +6320,13 @@
       "2022/05/01 - 2022/05/16",
       "2023/04/01 - 2023/04/15"
      ]
+    },
+    {
+     "name": "Sword Art Online",
+     "eventIds": [
+      1264
+     ],
+     "notes": "Collab with Sword Art Online (Kirito, Asuna, Yuuki, Leafa...). Identified from the characters in the live 4.177.0 data."
     },
     {
      "name": "Tensura",

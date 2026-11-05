@@ -65,8 +65,7 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
 2. Calls only in 4.x (`deckEditMulti`, `getEventCondition`, `getEventQuest`, `getEventMessage`...):
    wait for real requests (admin -> Logs -> Unimplemented requests) from a client on an emulator.
 3. Test `Tools/patch_apk.py` output and `docs/EMULATOR.md` on a real emulator / phone (needs the user).
-4. Event Guide: more history entries (SAO 1264, Rent-A-Girlfriend 1287, Fire Force 1335 are in the
-   live data but have no history entry).
+4. Event Guide: character pictures / Drive folders for SAO, Rent-A-Girlfriend, Fire Force (entries exist).
 5. Data from links the user sends (MediaFire `--direct` links, Drive, archive.org): compare file
    names with the data download, add missing ones under `dataDownload/<ver>/archive/`.
 The web search tool refuses searches for game-data dumps on file hosts: only use links the user gives.
