@@ -55,6 +55,10 @@ namespace Puniemu.Src.Server.Events
         [JsonIgnore]
         public List<string> Hints { get; set; } = new();
 
+        // Yo-kai ids that belong to this event (bonus / featured Yo-kai), used to suggest history links
+        [JsonIgnore]
+        public HashSet<string> YoukaiIds { get; set; } = new();
+
         [JsonIgnore]
         public EventPack? Pack { get; set; }
     }

@@ -1,5 +1,7 @@
 {
  "_info": "Regular expressions applied to whole texts that are still Japanese. $1, $2... are the captured parts (translated with the other dictionaries when possible).",
+ "^ステージ([0-9０-９,，]+)をコンティニューしないでクリアしよう$": "Clear Stage $1 Without Continuing",
+ "^ステージ([0-9０-９,，]+)を回復しないでクリアしよう$": "Clear Stage $1 Without Healing",
  "^スコア([0-9０-９,，]+)以上$": "Score $1 Points or More",
  "^([0-9０-９,，]+)コンボ以上$": "Get a Combo of $1 or More",
  "^妖怪ぷにをサイズ([0-9０-９,，]+)以上$": "Make a Yo-kai Puni of Size $1 or More",
@@ -31,12 +33,16 @@
  "^裏ステージ([0-9０-９]+)$": "Reverse Stage $1",
  "^ステージ<R>?([0-9０-９]+)</R>?をクリアしよう$": "Clear Stage $1",
  "^ボスステージ<R>?([0-9０-９]+)</R>?の<R>?(.+?)</R>?を倒そう$": "Defeat $2 in Boss Stage $1",
- "^<R>?(.+?)</R>?を<R>?([0-9０-９]+)</R>?回倒そう$": "Defeat $1 $2 times",
  "^スコアアタックをプレイしよう$": "Play Score Attack",
  "^(.+) Lv([0-9]+)$": "$1 Lv$2",
  "^(.+?)[（(]ライト[)）]$": "$1 (Light)",
  "^(.+?)[（(]ダーク[)）]$": "$1 (Dark)",
  "^(.+?)[（(]覚醒[)）]$": "$1 (Awakened)",
  "^(.+?)\\s*Ｌｖ([0-9０-９]+)$": "$1 Lv$2",
+ "^(.+?)で(.+?)を([0-9０-９,，]+)回倒そう$": "Defeat $2 $3 Times in $1",
+ "^(.+?)で(.+?)を倒そう$": "Defeat $2 in $1",
+ "^(.+?)を([0-9０-９,，]+)回クリアしよう$": "Clear $1 $2 Times",
+ "^(.+?)をクリアしよう$": "Clear $1",
+ "^<R>?(.+?)</R>?を<R>?([0-9０-９]+)</R>?回倒そう$": "Defeat $1 $2 times",
  "^<R>?(.+?)</R>?を倒そう$": "Defeat $1"
 }

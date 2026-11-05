@@ -112,6 +112,22 @@ namespace Puniemu.Src.Server.Web
                     effect = Clean(r[5])
                 })
                 .ToList();
+            // Newer data keeps the bonus Yo-kai in ywp_mst_event_youkai_assist (no description text)
+            var cacheAssist = DataManager.Logic.DataManager.GameDataManager.GamedataCache;
+            if (cacheAssist.TryGetValue("ywp_mst_event_youkai_assist", out var assistRaw))
+            {
+                var listed = bonuses.Select(b => b.youkai).ToHashSet();
+                foreach (var row in EventManager.ReadJsonRows(assistRaw, out _))
+                {
+                    var eid = (row.Value<long?>("eventId") ?? 0).ToString();
+                    var yid = (row.Value<long?>("youkaiId") ?? 0).ToString();
+                    if (!ids.Contains(eid) || yid == "0") continue;
+                    var name = yokai.TryGetValue(yid, out var n) ? n : "Yo-kai #" + yid;
+                    if (!listed.Add(name)) continue;
+                    bonuses.Add(new { youkai = name, image = imageByYoukai.TryGetValue(yid, out var im) ? im : null, effect = "Event bonus" });
+                    if (bonuses.Count >= 60) break;
+                }
+            }
             // Missions: ywp_mst_event_quest_sub = eventId | ? | no | ? | ? | text | ...
             var missions = Rows("ywp_mst_event_quest_sub")
                 .Where(r => r.Length > 5 && ids.Contains(r[0]) && r[5].Length > 0)

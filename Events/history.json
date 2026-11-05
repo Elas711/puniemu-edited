@@ -4336,7 +4336,9 @@
     },
     {
      "name": "Hololive",
-     "eventIds": [],
+     "eventIds": [
+      1317
+     ],
      "driveFolder": "https://drive.google.com/drive/folders/19Lwx33CzCaHNS05BuQzJdYJ16VhnuDdG",
      "characters": [
       {
@@ -5576,7 +5578,9 @@
     },
     {
      "name": "Quintessential Quintuplets",
-     "eventIds": [],
+     "eventIds": [
+      1294
+     ],
      "driveFolder": "https://drive.google.com/drive/folders/1SI4EJli_wfh5uwAGjUIFTyvpDt7Rpjap",
      "characters": [
       {

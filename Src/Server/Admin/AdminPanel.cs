@@ -231,6 +231,20 @@ namespace Puniemu.Src.Server.Admin
                 return EventManager.DescribeHistory();
             });
 
+            Api(app, "GET", "/admin/api/events/history/suggestions", async ctx =>
+            {
+                await Task.CompletedTask;
+                return EventManager.SuggestHistoryLinks(3).Select(x => new { series = x.series, name = x.name, eventId = x.eventId, overlap = x.overlap });
+            });
+
+            Api(app, "POST", "/admin/api/events/history/autolink", async ctx =>
+            {
+                await Task.CompletedTask;
+                var n = EventManager.AutoLinkHistory(10);
+                Log.Info("admin", $"auto-linked {n} history entries");
+                return new { linked = n };
+            });
+
             Api(app, "POST", "/admin/api/events/history", async ctx =>
             {
                 var b = await ReadJson(ctx);

@@ -62,6 +62,7 @@ pre{white-space:pre-wrap;font-size:12px;max-height:520px;overflow:auto;margin:0}
 <p class=""muted"">Events are discovered from the loaded master data and from Events/*.json packs. Players must return to the title screen to receive the new event data.</p>
 <div class=""scroll""><table id=""elist""></table></div></div>
 <div class=""card""><h2>Event history</h2><p class=""muted"">Every event of the live game (Events/history.json). Enter the event ids from the list above that belong to an entry: those events get its name and series, and players see it as playable.</p>
+<div class=""row""><button class=""ghost"" id=""hauto"">Auto-link strong matches</button><span class=""muted"" id=""hsug""></span></div>
 <input id=""hfilter"" placeholder=""Filter..."" style=""width:100%;margin-bottom:8px""><div class=""scroll""><table id=""hlist""></table></div></div></section>
 
 <section id=""t-gifts"" class=""hidden""><div class=""card""><h2>New server-wide gift</h2><p class=""muted"">Every player receives it once, on their next login (new players too).</p>
@@ -118,7 +119,9 @@ function renderEvents(){var f=$('efilter').value.toLowerCase(),on={};EV.settings
  document.querySelectorAll('[data-e]').forEach(function(c){c.onchange=function(){var id=+c.dataset.e,a=EV.settings.activeEventIds,k=a.indexOf(id);if(c.checked&&k<0)a.push(id);if(!c.checked&&k>=0)a.splice(k,1);};});}
 $('efilter').oninput=renderEvents;
 var HIST=[];
-function loadHistory(){api('GET','/admin/api/events/history').then(function(h){HIST=h;renderHistory();}).catch(fail);}
+function loadHistory(){api('GET','/admin/api/events/history').then(function(h){HIST=h;renderHistory();}).catch(fail);
+ api('GET','/admin/api/events/history/suggestions').then(function(s){$('hsug').innerHTML=s.length?'Suggestions (by shared Yo-kai): '+s.map(function(x){return esc(x.name)+' &larr; #'+x.eventId+' ('+x.overlap+')';}).join(', '):'No link suggestions.';}).catch(fail);}
+$('hauto').onclick=function(){api('POST','/admin/api/events/history/autolink').then(function(r){toast('Linked '+r.linked+' event(s)');load('events');}).catch(fail);};
 function renderHistory(){var f=$('hfilter').value.toLowerCase(),rows='<tr><th>Series</th><th>Event</th><th>Event ids</th><th></th></tr>';
  HIST.forEach(function(s,si){s.events.forEach(function(e,ei){if((s.series+' '+e.name).toLowerCase().indexOf(f)<0)return;
   rows+='<tr><td class=""muted"">'+esc(s.series)+'</td><td>'+esc(e.name)+(e.available?' <span class=""pill ok"">in data</span>':'')+'</td><td><input data-h=""'+si+'_'+ei+'"" value=""'+esc(e.eventIds.join(', '))+'"" size=""16""></td><td><button class=""ghost"" data-hs=""'+si+'_'+ei+'"">Link</button></td></tr>';});});

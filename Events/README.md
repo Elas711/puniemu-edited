@@ -62,7 +62,9 @@ compiled from the names in a community archive of the game's event art. Players 
 (**Help → Events & Server**) and see which events are playable on your server.
 
 The game data only knows events by number, so link them: admin panel → Events → **Event history**,
-type the event ids that belong to an entry and press **Link**. Linked events get the English name and
+type the event ids that belong to an entry and press **Link**. **Auto-link strong matches** does this
+for you where an event shares at least 10 Yo-kai with the pictures of a history entry (pictures named
+after Yo-kai ids); weaker matches are only shown as suggestions. Linked events get the English name and
 series in every list. The links are saved in `history.json`.
 
 ## Friendly names

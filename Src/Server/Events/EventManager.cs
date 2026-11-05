@@ -98,6 +98,50 @@ namespace Puniemu.Src.Server.Events
             Reload();
         }
 
+        // Suggests history links by comparing the Yo-kai of each event with the Yo-kai pictured for each
+        // history entry (pictures named art_<youkaiId>). Strong matches share dozens of Yo-kai.
+        public static List<(string series, string name, long eventId, int overlap)> SuggestHistoryLinks(int minOverlap = 1)
+        {
+            var result = new List<(string, string, long, int)>();
+            var hist = History;
+            foreach (var e in Catalog.Where(x => x.Selectable && x.YoukaiIds.Count > 0))
+            {
+                (string s, string n, int o) best = ("", "", 0);
+                foreach (var s in hist.Series)
+                    foreach (var h in s.Events)
+                    {
+                        if (h.EventIds.Contains(e.EventId)) { best = ("", "", -1); goto next; }
+                        var arts = (h.Characters ?? new()).Select(c => c.Name.StartsWith("art_") ? c.Name.Substring(4) : null).Where(x => x != null);
+                        var o = arts.Count(a => e.YoukaiIds.Contains(a!));
+                        if (o > best.o) best = (s.Series, h.Name, o);
+                    }
+                next:
+                if (best.o >= minOverlap) result.Add((best.s, best.n, e.EventId, best.o));
+            }
+            return result.OrderByDescending(x => x.Item4).ToList();
+        }
+
+        // Links every suggestion with at least minOverlap shared Yo-kai. Returns how many were linked.
+        public static int AutoLinkHistory(int minOverlap = 10)
+        {
+            var links = SuggestHistoryLinks(minOverlap);
+            if (links.Count == 0) return 0;
+            var dir = DataManager.Logic.DataManager.ResolvePath(DataManager.Logic.DataManager.EventsPath);
+            lock (_historyFileLock)
+            {
+                var history = LoadHistory(dir);
+                foreach (var (series, name, eventId, _) in links)
+                {
+                    var h = history.Series.FirstOrDefault(x => x.Series == series)?.Events.FirstOrDefault(x => x.Name == name);
+                    if (h != null && !h.EventIds.Contains(eventId)) h.EventIds.Add(eventId);
+                }
+                Directory.CreateDirectory(dir);
+                File.WriteAllText(HistoryPath(dir), JsonConvert.SerializeObject(history, Formatting.Indented));
+            }
+            Reload();
+            return links.Count;
+        }
+
         // History with, for every entry, whether this server has data for it.
         public static object DescribeHistory()
         {
@@ -227,6 +271,23 @@ namespace Puniemu.Src.Server.Events
                     }
                 }
             }
+
+            // 3b. Yo-kai of each event (bonus Yo-kai, matches, assists)
+            if (cache.TryGetValue("ywp_mst_event_youkai_assist_disp", out var disp))
+                foreach (var r in ReadPipeRows(disp, out _))
+                    if (r.Length > 1 && long.TryParse(r[1], out var eid) && catalog.TryGetValue(eid, out var e)) e.YoukaiIds.Add(r[0]);
+            if (cache.TryGetValue("ywp_mst_event_match", out var match))
+                foreach (var r in ReadPipeRows(match, out _))
+                    if (r.Length > 4 && long.TryParse(r[0], out var eid) && catalog.TryGetValue(eid, out var e)) { e.YoukaiIds.Add(r[3]); e.YoukaiIds.Add(r[4]); }
+            if (cache.TryGetValue("ywp_mst_event_youkai_assist", out var assist))
+                foreach (var row in ReadJsonRows(assist, out _))
+                {
+                    var eid = row.Value<long?>("eventId") ?? 0;
+                    if (!catalog.TryGetValue(eid, out var e)) continue;
+                    foreach (var p in row.Properties())
+                        if (p.Name.Contains("oukai", StringComparison.OrdinalIgnoreCase) && p.Value.Type == JTokenType.Integer && p.Value.Value<long>() > 1000000)
+                            e.YoukaiIds.Add(p.Value.ToString());
+                }
 
             // 4. event packs
             var transformTables = new HashSet<string> { EVENT_TABLE, MAP_TABLE };

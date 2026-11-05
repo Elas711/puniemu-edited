@@ -16,6 +16,7 @@ namespace Puniemu.Src.Server.Translation
     // data and can export every untranslated string for community translation.
     public static class TranslationManager
     {
+        private static readonly Regex HIGHLIGHT = new("</?[A-Z]>", RegexOptions.Compiled);
         private static readonly Regex JAPANESE = new(@"[぀-ヿ㐀-鿿ｦ-ﾟ]", RegexOptions.Compiled);
 
         private static Dictionary<string, string> _exact = new();
@@ -103,7 +104,8 @@ namespace Puniemu.Src.Server.Translation
                     try
                     {
                         // Captured parts are translated too ("ボスステージ13のジバニャンを倒そう")
-                        var m = p.Key.Match(result.Replace("\r", "").Replace("\n", ""));
+                        // ignore line breaks and the <R>..</R> highlight tags when matching
+                        var m = p.Key.Match(HIGHLIGHT.Replace(result.Replace("\r", "").Replace("\n", ""), ""));
                         if (!m.Success) continue;
                         var repl = p.Value;
                         for (int g = m.Groups.Count - 1; g >= 1; g--)
