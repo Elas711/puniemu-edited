@@ -42,6 +42,7 @@ pre{white-space:pre-wrap;font-size:12px;max-height:520px;overflow:auto;margin:0}
 <h2 style=""margin-top:14px"">Give / take</h2>
 <div class=""row""><label>Y-Money <input id=""gy"" type=""number"" value=""0"" style=""width:110px""></label><label>Spirits <input id=""gs"" type=""number"" value=""0"" style=""width:80px""></label></div>
 <div class=""row""><label>Items <input id=""gi"" placeholder=""itemId:count, itemId:count"" size=""32""></label><label>Yo-kai <input id=""gk"" placeholder=""youkaiId, youkaiId"" size=""26""></label><button class=""act"" id=""grant"">Apply</button></div>
+<div class=""row""><label>Look up <select id=""lt""><option value=""youkai"">Yo-kai</option><option value=""item"">Item</option></select></label><input id=""lq"" placeholder=""name or id"" size=""18""><button class=""ghost"" id=""lbtn"">Find</button><span id=""lres"" class=""muted""></span></div>
 <h2 style=""margin-top:14px"">Save</h2>
 <div class=""row""><input id=""rname"" placeholder=""New player name"" size=""20""><button class=""ghost"" id=""rbtn"">Rename</button>
 <button class=""ghost"" id=""xbtn"">Export save</button><label class=""ghost"">Import save <input type=""file"" id=""ifile"" accept="".json""></label></div>
@@ -140,6 +141,10 @@ function openPlayer(g){api('GET','/admin/api/player/'+encodeURIComponent(g)).the
   '<br>events: '+esc(p.eventChoice?p.eventChoice.mode+' '+p.eventChoice.ids.join(','):'server')+(p.ban?'<br><span class=""pill bad"">banned: '+esc(p.ban.reason)+'</span>':'');}).catch(fail);}
 $('grant').onclick=function(){api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/grant',{ymoney:+$('gy').value,spirits:+$('gs').value,items:parseItems($('gi').value),youkai:parseIds($('gk').value)})
  .then(function(r){toast('Applied'+(r.Notes&&r.Notes.length?' ('+r.Notes.join('; ')+')':''));openPlayer(CUR);}).catch(fail);};
+$('lbtn').onclick=function(){api('GET','/admin/api/lookup?type='+$('lt').value+'&q='+encodeURIComponent($('lq').value)).then(function(l){
+ $('lres').innerHTML=l.length?l.map(function(x){return '<a href=""#"" data-add=""'+esc(x.id)+'"">'+esc(x.name)+' ('+esc(x.id)+')</a>';}).join(' &middot; '):'nothing found';
+ document.querySelectorAll('[data-add]').forEach(function(a){a.onclick=function(ev){ev.preventDefault();var f=$('lt').value==='item'?$('gi'):$('gk');
+  f.value=(f.value?f.value+', ':'')+a.dataset.add+($('lt').value==='item'?':1':'');};});}).catch(fail);};
 $('rbtn').onclick=function(){api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/rename',{name:$('rname').value}).then(function(){toast('Renamed');openPlayer(CUR);}).catch(fail);};
 $('xbtn').onclick=function(){api('GET','/admin/api/player/'+encodeURIComponent(CUR)+'/export').then(function(j){var a=document.createElement('a');
  a.href=URL.createObjectURL(new Blob([JSON.stringify(j)],{type:'application/json'}));a.download='save-'+(j.friendCode||'player')+'.json';a.click();}).catch(fail);};

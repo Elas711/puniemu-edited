@@ -432,3 +432,6 @@ server_state.json.tmp
 wwwroot/
 dataDownload/
 Translations/*/untranslated.json
+
+# Replacement asset files (game assets, not committed)
+AssetOverlay/

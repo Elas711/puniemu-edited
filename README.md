@@ -103,7 +103,10 @@ The client has to be patched to talk to your server instead of NHN's.
 3. Rebuild and sign the APK (e.g. `java -jar uber-apk-signer.jar -a game.apk --allowResign`).
 
 [TheC0mmand/WibWobPadaboom](https://github.com/TheC0mmand/WibWobPadaboom) ships an APK builder and an
-installer that automate this for Wibble Wobble.
+installer that automate this for Wibble Wobble, and
+[WibWobPS/wwpatcher](https://github.com/WibWobPS/wwpatcher) is a web tool that rewrites the launching
+zone of an `.apk` or `.ipa` and resigns it. Puniemu answers the launching request those patched
+builds make (`/hsp/...getLaunchingInfos`).
 
 For a public server put a reverse proxy with TLS in front of Puniemu (and set
 `"TrustProxyHeaders": true`). Tunnels such as ngrok work too if the host fits into the 33 characters.
@@ -167,6 +170,15 @@ before it is sent (exact text matches, optional phrase replacements). The tool
 with the English Wibble Wobble tables (same ids), and can export everything that is still Japanese
 for manual translation. See [Translations/README.md](Translations/README.md).
 
+**Translated images and sounds (works on Android too):** the
+[YWP-Translation](https://github.com/Lit8tech/YWP-Translation) project made English versions of
+about 9,600 of the game's image and sound files, but only ships them as an iOS mod. Puniemu can send
+them to every client through the data download: copy (or `git clone`) that project into an
+`AssetOverlay/` folder next to the server. On startup every file that replaces a data download file
+gets a new version, so clients download it again; requests for it are answered with the overlay
+copy. Any other replacement files work the same way (files are matched by name). Requires the
+client to download its assets from this server (`ServeDataDownload`).
+
 All server messages, logs and code comments are in English.
 
 ### Admin panel
@@ -176,7 +188,7 @@ Set `AdminToken` and open `http://your-server:8080/admin`, enter the token.
 | Tab | What you can do |
 | --- | --- |
 | Overview | online players, accounts, uptime, memory, requests and errors per endpoint |
-| Players | search by name / friend code / user id / gdkey, give or take Y-Money, spirits, items, Yo-kai, rename, export / import a save (backup or move it to another account), ban / unban |
+| Players | search by name / friend code / user id / gdkey, look up Yo-kai / item ids by name, give or take Y-Money, spirits, items, Yo-kai, rename, export / import a save (backup or move it to another account), ban / unban |
 | Events | the event switcher (see above) |
 | Gifts | server-wide gifts - every player receives them once on their next login |
 | Settings | Y-Money and EXP multipliers, infinite spirits, news text, maintenance mode, save all accounts now |
@@ -260,7 +272,7 @@ All keys are optional except `PostgresConnectionString` and `IsWibWob`.
 | `DataDownloadPath` | `wwwroot/dataDownload` | asset folder served under `/dataDownload` |
 | `AdminToken` | `""` | enables the admin panel |
 | `Language` | `""` | `en` = translate the game data with `Translations/en` |
-| `TranslationsPath` / `EventsPath` / `WebPath` | `Translations` / `Events` / `Web` | folders |
+| `TranslationsPath` / `EventsPath` / `WebPath` / `AssetOverlayPath` | `Translations` / `Events` / `Web` / `AssetOverlay` | folders |
 | `ServerStatePath` | `server_state.json` | runtime settings file |
 | `AccountOwnershipMode` | `log` | `off`, `log` or `enforce` |
 | `RateLimitPerMinute` | `900` | per IP, `0` = off |
@@ -296,4 +308,6 @@ Community forks this edition takes features and fixes from:
 - **eliasderzocker** - Pterodactyl egg
 - **Rorosak** - FoodType enum
 - **Amumis** - Wibble Wobble server guide
+- **Lit8tech and the YWP-Translation team** - the English images/sounds the asset overlay can serve
+- **cursedmono** - WWR Explorer (idea for the admin id lookup)
 - **TheC0mmand** - WibWobPadaboom (Wibble Wobble tooling and English docs)

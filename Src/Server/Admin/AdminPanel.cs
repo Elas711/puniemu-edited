@@ -180,6 +180,22 @@ namespace Puniemu.Src.Server.Admin
                 return new { ok = true, name };
             });
 
+            // Find Yo-kai / item ids by name (for the give fields). Idea from cursedmono's WWR Explorer.
+            Api(app, "GET", "/admin/api/lookup", async ctx =>
+            {
+                await Task.CompletedTask;
+                var q = ctx.Request.Query["q"].ToString().Trim();
+                var type = ctx.Request.Query["type"].ToString() == "item" ? "ywp_mst_item" : "ywp_mst_youkai";
+                if (q.Length == 0) return new List<object>();
+                var cache = DataManager.Logic.DataManager.GameDataManager.GamedataCache;
+                if (!cache.TryGetValue(type, out var raw)) return new List<object>();
+                // name column: 1 in ywp_mst_youkai, 2 in ywp_mst_item
+                int nameCol = type == "ywp_mst_item" ? 2 : 1;
+                return EventManager.ReadPipeRows(raw, out _)
+                    .Where(r => r.Length > nameCol && (r[0] == q || r[nameCol].Contains(q, StringComparison.OrdinalIgnoreCase)))
+                    .Take(50).Select(r => (object)new { id = r[0], name = r[nameCol] }).ToList();
+            });
+
             Api(app, "GET", "/admin/api/events", async ctx =>
             {
                 await Task.CompletedTask;

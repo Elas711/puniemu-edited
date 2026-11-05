@@ -28,6 +28,25 @@ namespace Puniemu.Src.Server.Web
         {
             var provider = CreateContentTypeProvider();
 
+            // Asset overlay first: replacement files win over the data download
+            if (AssetOverlay.Count > 0)
+            {
+                app.Use(async (ctx, next) =>
+                {
+                    var path = ctx.Request.Path.Value;
+                    if (HttpMethods.IsGet(ctx.Request.Method) && path != null && !path.Contains(".nhn") &&
+                        !path.StartsWith("/admin") && !path.StartsWith("/web/") &&
+                        AssetOverlay.TryGet(Path.GetFileName(path.TrimEnd('/')), out var file))
+                    {
+                        if (!provider.TryGetContentType(file, out var ct)) ct = "application/octet-stream";
+                        ctx.Response.ContentType = ct;
+                        await ctx.Response.SendFileAsync(file);
+                        return;
+                    }
+                    await next();
+                });
+            }
+
             // wwwroot (layout used by most guides: wwwroot/dataDownload/...)
             var wwwroot = DataManager.Logic.DataManager.ResolvePath("wwwroot");
             if (Directory.Exists(wwwroot))

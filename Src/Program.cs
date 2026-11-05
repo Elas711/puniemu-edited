@@ -95,6 +95,8 @@ class Program
         ServerStateStore.Load(DataManager.Logic.DataManager.ResolvePath(DataManager.Logic.DataManager.ServerStatePath));
         //Optional English (or other) overlay for the game's master data
         TranslationManager.Initialize();
+        //Replacement asset files (e.g. translated images) served instead of the data download ones
+        AssetOverlay.Initialize();
         //Build the event catalog from the loaded master data and Events/*.json packs
         EventManager.Initialize();
 

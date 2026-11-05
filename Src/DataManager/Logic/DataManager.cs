@@ -68,6 +68,9 @@ namespace Puniemu.Src.DataManager.Logic
         // Where event packs (Events/*.json) live.
         public static string EventsPath { get; private set; } = "Events";
 
+        // Replacement data download files (e.g. translated images), matched by file name.
+        public static string AssetOverlayPath { get; private set; } = "AssetOverlay";
+
         // Where in-game web pages live (notice pages, event selector, ...).
         public static string WebPath { get; private set; } = "Web";
 
@@ -121,6 +124,7 @@ namespace Puniemu.Src.DataManager.Logic
             TranslationsPath = GetString(config, "TranslationsPath", TranslationsPath);
             EventsPath = GetString(config, "EventsPath", EventsPath);
             WebPath = GetString(config, "WebPath", WebPath);
+            AssetOverlayPath = GetString(config, "AssetOverlayPath", AssetOverlayPath);
             ServerStatePath = GetString(config, "ServerStatePath", ServerStatePath);
             AccountOwnershipMode = GetString(config, "AccountOwnershipMode", AccountOwnershipMode).ToLowerInvariant();
             RateLimitPerMinute = int.TryParse(config["RateLimitPerMinute"], out var rl) ? rl : RateLimitPerMinute;

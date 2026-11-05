@@ -734,7 +734,7 @@ namespace Puniemu.Src.Server.Events
         }
 
         // Reads a pipe/asterisk table. Supports raw text or {"tableData": "..."}.
-        internal static List<string[]> ReadPipeRows(string raw, out JObject? wrap)
+        public static List<string[]> ReadPipeRows(string raw, out JObject? wrap)
         {
             wrap = null;
             string text = raw;
