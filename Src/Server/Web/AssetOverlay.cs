@@ -43,6 +43,19 @@ namespace Puniemu.Src.Server.Web
                 }
             }
 
+            // Files identical to the ones the server already has are not overlaid: they would only make
+            // players download the same file again (the translation project reuses many originals).
+            int identical = 0;
+            var originals = IndexDataDownload();
+            if (originals.Count > 0)
+            {
+                foreach (var name in files.Keys.ToList())
+                {
+                    if (!originals.TryGetValue(name, out var copies)) continue;
+                    if (copies.Any(o => SameContent(files[name], o))) { files.Remove(name); identical++; }
+                }
+            }
+
             var cache = DataManager.Logic.DataManager.GameDataManager.GamedataCache;
             int applied = 0;
             var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -83,7 +96,41 @@ namespace Puniemu.Src.Server.Web
 
             _files = files.Where(kv => used.Contains(kv.Key)).ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.OrdinalIgnoreCase);
             Applied = applied;
-            Log.Info("overlay", $"Asset overlay: {files.Count} files found, {applied} replace data download files");
+            Log.Info("overlay", $"Asset overlay: {files.Count + identical} files found, {applied} replace data download files" +
+                (identical > 0 ? $" ({identical} skipped: identical to the server's copy)" : ""));
+        }
+
+        private static Dictionary<string, List<string>> IndexDataDownload()
+        {
+            var index = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            var dirs = new[]
+            {
+                DataManager.Logic.DataManager.ResolvePath(DataManager.Logic.DataManager.DataDownloadPath),
+                DataManager.Logic.DataManager.ResolvePath("dataDownload")
+            }.Where(Directory.Exists).Distinct();
+            foreach (var dir in dirs)
+                foreach (var f in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+                {
+                    var n = Path.GetFileName(f);
+                    if (!index.TryGetValue(n, out var l)) index[n] = l = new List<string>();
+                    l.Add(f);
+                }
+            return index;
+        }
+
+        private static bool SameContent(string a, string b)
+        {
+            try
+            {
+                if (new FileInfo(a).Length != new FileInfo(b).Length) return false;
+                using var sa = File.OpenRead(a);
+                using var sb = File.OpenRead(b);
+                return System.Security.Cryptography.SHA1.HashData(sa).AsSpan().SequenceEqual(System.Security.Cryptography.SHA1.HashData(sb));
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static void BumpTableVersion(System.Collections.Concurrent.ConcurrentDictionary<string, string> cache, string table, int bump)

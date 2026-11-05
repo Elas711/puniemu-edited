@@ -178,7 +178,12 @@ about 9,600 of the game's image and sound files, but only ships them as an iOS m
 them to every client through the data download: copy (or `git clone`) that project into an
 `AssetOverlay/` folder next to the server. On startup every file that replaces a data download file
 gets a new version, so clients download it again; requests for it are answered with the overlay
-copy. Any other replacement files work the same way (files are matched by name). Requires the
+copy. Files identical to the server's own copy are skipped, so players only re-download what really
+changed (on a Wibble Wobble server most of that project's files are already the English originals).
+The replacement files must be in the game's own format (plain PNG, the game's encrypted `.m4`/`.ez`...),
+as the YWP-Translation files are; [pqr29/wibwob_assets_encryptor](https://github.com/pqr29/wibwob_assets_encryptor)
+and [simontime/fictional-couscous](https://github.com/simontime/fictional-couscous) convert to and from
+that format. Any other replacement files work the same way (files are matched by name). Requires the
 client to download its assets from this server (`ServeDataDownload`).
 
 All server messages, logs and code comments are in English.
