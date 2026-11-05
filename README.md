@@ -122,6 +122,10 @@ is built at run time inside `libSGF.so`), so it cannot simply be replaced.
 [docs/ARCHIVES.md](docs/ARCHIVES.md) lists where old game data survives (archive.org uploads of
 event caches, Wibble Wobble server data...) and how to get it.
 
+[docs/PROTOCOL.md](docs/PROTOCOL.md) has the request fields and response parts of 107 server calls,
+read out of the unpacked Wibble Wobble 2.2.6 client with `Tools/extract_protocols.py` (the 4.177.0
+client's code is encrypted).
+
 [docs/CLIENT_ENDPOINTS.md](docs/CLIENT_ENDPOINTS.md) lists all 164 endpoints the 4.177.0 client
 knows and which ones Puniemu answers. Requests to the others are recorded with their decrypted body
 (admin panel -> Logs -> Unimplemented requests), so they can be implemented from real traffic.

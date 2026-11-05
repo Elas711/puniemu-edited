@@ -46,6 +46,9 @@ def load_table(path):
             return "pipe", [r.split("|") for r in raw.split("*")]
         if isinstance(tok, dict) and isinstance(tok.get("tableData"), str):
             return "pipe", [r.split("|") for r in tok["tableData"].split("*")]
+        # app captures: {"appVersion": 40060, "masterData": "row|row*..."}
+        if isinstance(tok, dict) and isinstance(tok.get("masterData"), str):
+            return "pipe", [r.split("|") for r in tok["masterData"].split("*")]
         if isinstance(tok, dict) and isinstance(tok.get("data"), list):
             return "json", [r for r in tok["data"] if isinstance(r, dict)]
         if isinstance(tok, list):
