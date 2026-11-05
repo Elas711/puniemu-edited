@@ -120,6 +120,13 @@ def ordinal(n):
     return "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
 
 
+def quote_short(src):
+    """Very short texts ("冬服", "三玖") are read as labels when quoted; unquoted the model makes things up."""
+    if JAPANESE.search(src) and len(src) <= 8 and not re.search(r"[。！？!?「」『』]", src):
+        return "「" + src + "」"
+    return src
+
+
 def protect(text, glossary):
     """Puts the English names in. Returns the new text and the names used."""
     used = []
@@ -152,7 +159,7 @@ def tidy(src, out, used):
         out = out.replace("♪", "").strip()
     if not re.search(r"[「」『』\"“”]", src):
         # the model quotes the English names it finds in the sentence
-        out = re.sub(r"[\"“”]", "", out)
+        out = re.sub(r"[\"“”「」『』]", "", out)
     out = re.sub(r" +([:,.!?])", r"\1", out).strip()
     out = restore_case(out, used)
     if len(out) > 3 and out.isupper() and not src.isascii():
@@ -235,6 +242,15 @@ def prepare(page, glossary):
         flat = ANY_TAG.sub("", seg)
         for ph, stand_in in placeholders(page):
             flat = flat.replace(ph, stand_in)
+        # names with a variant in brackets ("三玖(水着)"): name and variant on their own
+        mv = re.match(r"^([^()（）]{1,20})[(（]([^()（）]{1,12})[)）]$", unicodedata.normalize("NFKC", flat))
+        if mv and not HIRAGANA.search(mv.group(1).replace("の", "")):
+            for part, join in ((mv.group(1), "("), (mv.group(2), ")")):
+                src, u = protect(part.strip(), glossary)
+                srcs.append(quote_short(src))
+                used += u
+                joins.append(" " + join if join == "(" else join)
+            continue
         # short labels made of parts ("10周年・極妖怪パス"): each part on its own, joined with ": "
         # "HP・ATK" is a list, not name parts
         flat = re.sub(r"(?<=[A-Za-z0-9])・(?=[A-Za-z0-9])", "/", flat)
@@ -244,13 +260,13 @@ def prepare(page, glossary):
             parts = [x for x in flat.split("・") if x.strip()]
             for k, part in enumerate(parts):
                 src, u = protect(unicodedata.normalize("NFKC", part).strip(), glossary)
-                srcs.append(src)
+                srcs.append(quote_short(src))
                 used += u
                 joins.append(": " if k < len(parts) - 1 else " ")
             continue
         flat = unicodedata.normalize("NFKC", flat).replace("　", " ").strip()
         src, u = protect(flat, glossary)
-        srcs.append(src)
+        srcs.append(quote_short(src))
         used += u
         joins.append(" ")
     width = max(disp_width(ANY_TAG.sub("", l)) for l in lines) if lines else 0
@@ -346,9 +362,13 @@ def main():
         seg_out = {(n[0], n[1], n[2]): o for n, o in zip(need, outs)}
         result = {}
         for (tj, pi, prep) in jobs:
-            result[(tj, pi)] = "".join(seg_out.get((tj, pi, si), sent).strip().rstrip(".") + prep[4][si]
-                                       if prep[4][si] == ": " else seg_out.get((tj, pi, si), sent) + prep[4][si]
-                                       for si, sent in enumerate(prep[0])).strip()
+            pieces = []
+            for si, sent in enumerate(prep[0]):
+                o = seg_out.get((tj, pi, si), sent)
+                if prep[4][si] != " ":  # a part of a label: no sentence end, no brackets of its own
+                    o = o.strip().strip("「」『』“”\"").strip().rstrip(".").strip("()")
+                pieces.append(o + prep[4][si])
+            result[(tj, pi)] = "".join(pieces).strip()
         for ti, text in enumerate(batch):
             sep, pages = pages_of[ti]
             new_pages = []

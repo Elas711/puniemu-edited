@@ -109,7 +109,7 @@ namespace Puniemu.Src.Server.Web.Wiki
                 if (y.Rank <= 0 || y.Rank >= RANKS.Length || y.Name.Length == 0) continue;
                 // puni icon, big puni, then the character art (mypuni_* is only a decoration layer)
                 foreach (var candidate in new[] { $"bl_{y.Id}.png", $"title2_bl_{y.Id}.png", $"bu_{y.Id}_01.png" })
-                    if (StaticContent.TryFindAsset(candidate, out _)) { y.Image = candidate; break; }
+                    if (StaticContent.HasAsset(candidate)) { y.Image = candidate; break; }
                 w.YokaiById[y.Id] = y;
             }
             // Soultimates: youkaiId | name | ? | description

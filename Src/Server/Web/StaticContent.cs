@@ -146,17 +146,35 @@ namespace Puniemu.Src.Server.Web
             return _fileIndex != null && _fileIndex.TryGetValue(name, out path!);
         }
 
+        // A picture that is a plain file, or a PNG packed in an .ayd file of the same name.
+        public static bool HasAsset(string name) =>
+            TryFindAsset(name, out _) || (name.EndsWith(".png") && TryFindPacked(name, out _));
+
+        private static bool TryFindPacked(string name, out string aydPath)
+        {
+            aydPath = "";
+            if (!SAFE_ASSET.IsMatch(name) || _fileIndex == null) return false;
+            return _fileIndex.TryGetValue(PackedAssets.ContainerName(name), out aydPath!);
+        }
+
         public static async Task HandleAssetAsync(HttpContext ctx)
         {
             var name = (string?)ctx.Request.RouteValues["name"] ?? "";
-            if (!TryFindAsset(name, out var path))
+            if (TryFindAsset(name, out var path))
             {
-                ctx.Response.StatusCode = 404;
+                ctx.Response.ContentType = name.EndsWith(".png") ? "image/png" : name.EndsWith(".webp") ? "image/webp" : "image/jpeg";
+                ctx.Response.Headers["Cache-Control"] = "public, max-age=86400";
+                await ctx.Response.SendFileAsync(path);
                 return;
             }
-            ctx.Response.ContentType = name.EndsWith(".png") ? "image/png" : name.EndsWith(".webp") ? "image/webp" : "image/jpeg";
-            ctx.Response.Headers["Cache-Control"] = "public, max-age=86400";
-            await ctx.Response.SendFileAsync(path);
+            if (name.EndsWith(".png") && TryFindPacked(name, out var ayd) && PackedAssets.Extract(ayd, name) is { } png)
+            {
+                ctx.Response.ContentType = "image/png";
+                ctx.Response.Headers["Cache-Control"] = "public, max-age=86400";
+                await ctx.Response.Body.WriteAsync(png);
+                return;
+            }
+            ctx.Response.StatusCode = 404;
         }
 
         // Orders two copies of a file by the version folders they are in (app version, then date).
