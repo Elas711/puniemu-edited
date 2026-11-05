@@ -28,6 +28,11 @@ Uploads useful for Puniemu (found November 2026):
 | MediaFire `Yo-kai Watch Puni Puni 4.146.1 Data.rar` (3.0 GB, by Math_kk) | Android data folder of 4.146.1 (2025), 61,798 files + `ywp_cud` cache + shared_prefs (ad SDKs only) |
 | MediaFire `files.rar` (4.0 GB, by Pablxx Puni, 2026-10) | Android data folder (2026), 73,967 files + `ywp_cud` cache |
 
+| MediaFire `YWPPNews_Hololive8thColabEvent_UNFINISHED.rar` (189 MB, 2026-10) | saved official news pages (152) + images + promo videos of the Hololive 8 event; 59 crank-a-kai odds pages (`fetch_gacha_rates.py --html`) |
+| Google Drive `KirasPuniModelDump.zip` (1.7 GB) | 7,117 Yo-kai model files (`.ez`/`.ayd`), all still on the official server |
+| GitHub [Pabl06/YWPuniPuniAssets](https://github.com/Pabl06/YWPuniPuniAssets) | decoded art of collabs / maps / titles 2022-2025 (1,108 files the official server no longer has) and READMEs with each event's start date (used in `Events/history.json`) |
+| Discord `ezPuniImporter_V1_2.zip` | Blender add-on importing `.ez` / `.ymd` models (based on Tiniifan's Level-5 add-on); harmless code, not needed by the server |
+
 Every asset file of the three MediaFire packs is still on the official file server, so a full
 download with the data downloader already has them. MediaFire's page shows a Cloudflare bot check
 to servers; `Tools/mediafire_download.py --direct <link copied from the Download button>` fetches the
