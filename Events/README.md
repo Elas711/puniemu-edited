@@ -116,4 +116,5 @@ After adding or editing packs press **Rescan data** in the admin panel (or resta
 
 `dates` of the collaboration events (when they ran in the real game) come from the collab list of the
 Japanese fan wiki [妖怪ウォッチぷにぷにwiki](https://punipuni.miraheze.org) (monthly dumps on archive.org).
-The Event Guide shows them as "Originally: ...".
+Later start dates (2022-2025) come from the READMEs of [Pabl06/YWPuniPuniAssets](https://github.com/Pabl06/YWPuniPuniAssets)
+(documented by The Puni Dock). The Event Guide shows them as "Originally: ...".
