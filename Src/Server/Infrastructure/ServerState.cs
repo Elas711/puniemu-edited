@@ -80,8 +80,33 @@ namespace Puniemu.Src.Server.Infrastructure
 
     // Everything an operator can change at runtime from the admin panel. Persisted to
     // server_state.json so it survives restarts.
+    public class GachaSettings
+    {
+        // Coins for the crank-a-kai machines from the in-game Crank-a-kai page:
+        // "off", "free" (FreeCoinsPerDay a day) or "ymoney" (CoinPriceYMoney each)
+        [JsonProperty("coinShop")]
+        public string CoinShop { get; set; } = "free";
+
+        [JsonProperty("freeCoinsPerDay")]
+        public int FreeCoinsPerDay { get; set; } = 3;
+
+        [JsonProperty("coinPriceYMoney")]
+        public int CoinPriceYMoney { get; set; } = 3000;
+
+        // Players may mix machines: their Y-Money crank-a-kai draws from the merged pools
+        [JsonProperty("allowMix")]
+        public bool AllowMix { get; set; } = true;
+
+        // Mix used for players who did not choose one (empty = the normal machine)
+        [JsonProperty("serverMix")]
+        public List<int> ServerMix { get; set; } = new();
+    }
+
     public class ServerState
     {
+        [JsonProperty("gacha")]
+        public GachaSettings Gacha { get; set; } = new();
+
         [JsonProperty("maintenanceMode")]
         public bool MaintenanceMode { get; set; } = false;
 

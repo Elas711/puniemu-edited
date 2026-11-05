@@ -509,6 +509,7 @@ class Program
 
         //In-game wiki: Yo-kai, maps & stages, items, missions, crank-a-kai, guides
         Puniemu.Src.Server.Web.Wiki.WikiApi.Map(app);
+        Puniemu.Src.Server.Gacha.GachaWeb.Map(app);
 
         //Admin panel
         AdminPanel.Map(app);

@@ -90,6 +90,18 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
             int priceNum = int.Parse(GachaMstTable.Table[gachaIndex][5]);
             int gachaType = GachaMstTable.Table[gachaIndex].Length > 6 && int.TryParse(GachaMstTable.Table[gachaIndex][6], out var gt) ? gt : 0;
 
+            // Mixed machines (in-game Crank-a-kai page): the Y-Money crank-a-kai draws from the
+            // machines the player (or the server) picked
+            if (priceType == 1 && deserialized.RequestYoukaiId == 0)
+            {
+                var mix = await Puniemu.Src.Server.Gacha.GachaChoice.EffectiveMixAsync(deserialized.Level5UserId!);
+                if (mix.Count > 0)
+                {
+                    var mixed = Puniemu.Src.Server.Gacha.GachaLineup.MixPoolId(mix);
+                    if (mixed != -1) poolId = mixed;
+                }
+            }
+
             if (priceType == 1) // YMONEY
             {
                 if ((userData.YMoney - priceNum) < 0)

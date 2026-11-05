@@ -172,7 +172,8 @@ before it is sent (exact text matches, optional phrase replacements). The tool
 with the English Wibble Wobble tables (same ids). Everything that is left can be exported from the
 admin panel and machine-translated offline with `Tools/machine_translate.py` (a local
 Japanese -> English model, it keeps Yo-kai names, line breaks and placeholders), so the whole game
-is English; untranslated katakana names fall back to romaji. See [Translations/README.md](Translations/README.md).
+is English; untranslated katakana names fall back to romaji. Collab characters get their official
+English names from AniList (`Tools/fetch_anime_names.py`: Lelouch Lamperouge, Shinji Ikari, Rem...). See [Translations/README.md](Translations/README.md).
 
 **Translated images and sounds (works on Android too):** the
 [YWP-Translation](https://github.com/Lit8tech/YWP-Translation) project made English versions of
@@ -225,6 +226,26 @@ the server, and is in English when the data is English or translated) plus hand-
 
 Pictures come from the data download (`bl_<id>.png` and similar), so they appear when
 `ServeDataDownload` has the files.
+
+### Crank-a-kai: every machine, coins and mixes
+
+Every crank-a-kai of the master data works (338 on the live 4.177.0 data). The official servers keep
+the drop pools to themselves, so a machine without a captured pool (`gacha_pool.txt`) gets a lineup
+rebuilt from the master data: its "pick a Yo-kai" list (`ywp_mst_gacha_youkai_choice`) where it has
+one, otherwise the Yo-kai released in the three weeks after the machine came out (the Monster Strike
+coin gets Lucifer, Pandora, Moses...). They are added with a rate-up on top of the regular Yo-kai
+of a machine with the same price.
+
+In-game **Wiki -> Crank-a-kai** lists every machine with its lineup and odds, and:
+
+* **Get a coin** - coin machines need their coin; players get some free each day (or buy them for
+  Y-Money, or not at all - admin panel -> Settings -> Crank-a-kai),
+* **My mix** - add any machines to your mix and your normal Y-Money crank-a-kai draws from all of
+  them together (each machine counts the same). The server owner can set a mix for everyone.
+
+The page identifies players by the user id the game puts in the Help page link. Anybody who knows a
+player's id could use that player's free coins or mix, which is harmless; with "for Y-Money" they
+could also spend that player's Y-Money, so only use that mode with people you trust.
 
 ### In-game Event Guide
 

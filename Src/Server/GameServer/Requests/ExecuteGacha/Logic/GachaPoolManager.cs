@@ -31,19 +31,31 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
         //gachaid, weightSum
         private static ConcurrentDictionary<int, double> _weightSumCache = new();
 
+        private static readonly object _loadLock = new();
+
         public static void EnsureLoaded()
         {
             if (_isLoaded)
                 return;
+            lock (_loadLock)
+            {
+                if (_isLoaded) return;
+                var cache = DataManager.Logic.DataManager.GameDataManager.GamedataCache;
+                Gachas = cache.TryGetValue("gacha_pool", out var gachaTxt)
+                    ? JsonConvert.DeserializeObject<Dictionary<int, GachaPoolItem>>(gachaTxt) ?? throw new InvalidDataException("Bad gacha_pool.json")
+                    : new Dictionary<int, GachaPoolItem>();
+                // every other machine of ywp_mst_gacha gets a pool too (see GachaLineup)
+                Puniemu.Src.Server.Gacha.GachaLineup.EnsureBuilt();
+                _isLoaded = true;
+            }
+        }
 
-            var gachaTxt =
-                DataManager.Logic.DataManager.GameDataManager.GamedataCache["gacha_pool"];
-
-            Gachas =
-                JsonConvert.DeserializeObject<Dictionary<int, GachaPoolItem>>(gachaTxt)
-                ?? throw new InvalidDataException("Bad gacha_pool.json");
-
-            _isLoaded = true;
+        // A machine's pool, or a mixed pool (negative ids, see GachaLineup.MixPoolId).
+        public static bool TryGetPool(int id, out GachaPoolItem pool)
+        {
+            EnsureLoaded();
+            if (id < 0) return Puniemu.Src.Server.Gacha.GachaLineup.TryGetMixPool(id, out pool);
+            return Gachas.TryGetValue(id, out pool!);
         }
 
 
@@ -57,6 +69,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
         public static int ResolvePoolId(int gachaId)
         {
             EnsureLoaded();
+            if (gachaId < 0 && Puniemu.Src.Server.Gacha.GachaLineup.TryGetMixPool(gachaId, out _)) return gachaId;
             if (Gachas.ContainsKey(gachaId)) return gachaId;
             if (Gachas.Count == 0) return -1;
             return _fallback.GetOrAdd(gachaId, id =>
@@ -108,7 +121,8 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
                     SkillMaxYoukaiID = yokaiId
                 };
 
-                itemForConvert = Gachas[gachaId].ConvertItem[((int)rank).ToString()];
+                if (!TryGetPool(gachaId, out var convPool) || !convPool.ConvertItem.TryGetValue(((int)rank).ToString(), out itemForConvert))
+                    itemForConvert = convPool?.ConvertItem?.Values.FirstOrDefault() ?? new ItemWonPopup { ItemId = 20703, Count = 1 };
 
                 prizeType = PrizeType.ConvertItem;
                 ItemManager.AddItem(userItem, itemForConvert.ItemId, item_count: 1);
@@ -183,7 +197,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
             //Yokai have them by rank
             var placeHolderCapsule = CapsuleColor.Gray;
 
-            if (!Gachas.TryGetValue(gachaId, out GachaPoolItem? gacha))
+            if (!TryGetPool(gachaId, out GachaPoolItem? gacha))
             {
                 return null;
             }
@@ -281,7 +295,8 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
         private static GachaPrize GetFallbackItemPrize(GachaPoolItem gacha, int gachaId, TableParser<YwpUserItem> userItemTable,
             long lastMaxedYokai, RarityType lastMaxedRank, CapsuleColor placeHolderCapsule)
         {
-            var itemForConvert = gacha.ConvertItem[((int)lastMaxedRank).ToString()];
+            if (!gacha.ConvertItem.TryGetValue(((int)lastMaxedRank).ToString(), out var itemForConvert))
+                itemForConvert = gacha.ConvertItem.Values.FirstOrDefault() ?? new ItemWonPopup { ItemId = 20703, Count = 1 };
             ItemManager.AddItem(userItemTable, itemForConvert.ItemId, item_count: 1);
 
             return new GachaPrize

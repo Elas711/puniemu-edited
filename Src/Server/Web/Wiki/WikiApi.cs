@@ -46,7 +46,7 @@ namespace Puniemu.Src.Server.Web.Wiki
                     server = DataManager.Logic.DataManager.ServerName,
                     game = DataManager.Logic.DataManager.IsWibWob ? "Yo-kai Watch Wibble Wobble" : "Yo-kai Watch Puni Puni",
                     articles = WikiArticles.All.Select(a => new { id = a.Id, icon = a.Icon, title = a.Title }),
-                    counts = new { yokai = w.YokaiList.Count, maps = w.Maps.Count, stages = w.StageById.Count, items = w.Items.Count, missions = w.Missions.Count, gachas = w.Gachas.Count },
+                    counts = new { yokai = w.YokaiList.Count, maps = w.Maps.Count, stages = w.StageById.Count, items = w.Items.Count, missions = w.Missions.Count, gachas = Puniemu.Src.Server.Gacha.GachaLineup.Machines.Count },
                     settings = new
                     {
                         motd = st.Motd,

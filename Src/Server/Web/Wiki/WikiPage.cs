@@ -40,6 +40,7 @@ input[type=search],select{width:100%;padding:11px 14px;border-radius:22px;border
 .mini i{width:26px;height:26px;background:center/contain no-repeat;display:inline-block}
 .muted{color:var(--muted);font-size:13px}
 table.gl{width:100%;border-collapse:collapse}table.gl td{padding:6px;border-bottom:1px solid var(--line);font-size:14px}table.gl td:first-child{font-weight:700;width:45%}
+button.act{background:var(--blue);color:#fff;border:0;border-radius:14px;padding:8px 12px;font-size:14px;font-weight:700;margin:4px 4px 0 0}
 a{color:var(--blue)} .pill{display:inline-block;background:#e7f5ff;color:var(--blue);border-radius:10px;padding:2px 8px;font-size:12px;font-weight:700;margin:2px}
 details summary{cursor:pointer;font-weight:700;padding:6px 0}
 </style></head><body>
@@ -64,7 +65,7 @@ $('back').onclick=function(){history.back();};$('home').onclick=function(){nav('
 function bind(){var c=document.querySelectorAll('[data-go]');for(var i=0;i<c.length;i++)c[i].onclick=function(e){e.preventDefault();nav(this.getAttribute('data-go'));};}
 function page(t,h){$('title').textContent=t;$('app').innerHTML=h;bind();window.scrollTo(0,0);}
 function route(){var h=location.hash.replace(/^#\/?/,'').split('/');$('back').style.display=h[0]?'':'none';
- var r={yokai:yokaiList,y:yokai,maps:maps,m:map,items:items,missions:missions,gachas:gachas,guides:guides,a:article,server:server,links:links};
+ var r={yokai:yokaiList,y:yokai,maps:maps,m:map,items:items,missions:missions,gachas:gachas,g:gacha,guides:guides,a:article,server:server,links:links};
  (r[h[0]]||home)(decodeURIComponent(h[1]||''));}
 function home(){var c=IDX.counts;
  var t=[['#/yokai','&#128123;','Yo-kai',c.yokai+' Yo-kai'],['#/maps','&#128506;','Maps & stages',c.maps+' maps, '+c.stages+' stages'],['#/items','&#127873;','Items',c.items+' items'],
@@ -116,9 +117,36 @@ function filterList(title,url,render,init){get(url,function(L){page(title,'<inpu
  $('q').oninput=draw;draw();});}
 function items(q){filterList('Items','/web/api/wiki/items',function(i){return '<div class=""row""><div class=""t""><b>'+esc(i.name)+'</b><small>'+nl(i.text)+'</small></div></div>';},q);}
 function missions(){filterList('Missions','/web/api/wiki/missions',function(m){return '<div class=""row""><div class=""t""><b>'+esc(m.title)+'</b><small>'+esc(m.text)+(m.reward?' &middot; Reward: '+esc(m.reward):'')+'</small></div></div>';});}
-function gachas(){get('/web/api/wiki/gachas',function(G){page('Crank-a-kai','<p class=""muted"">Contents and odds of the Crank-a-kai machines on this server.</p>'+(G.length?G.map(function(g){
- return '<div class=""box""><h2>Crank-a-kai #'+esc(g.id)+'</h2>'+(g.price?'<p class=""muted"">Price: '+esc(g.price)+'</p>':'')+g.tiers.map(function(t){
-  return '<details><summary>Rank '+esc(t.rank)+(t.chance!=null?' &middot; '+t.chance+'%':'')+' ('+t.yokai.length+')</summary><div class=""mini"">'+t.yokai.map(function(y){return '<span data-go=""#/y/'+y.id+'""><i'+im(y.image)+'></i>'+esc(y.name)+'</span>';}).join('')+'</div></details>';}).join('')+'</div>';}).join(''):'<p class=""muted"">No crank-a-kai data.</p>'));});}
+var SRC={exact:'real pool',lineup:'machine lineup',built:'rebuilt lineup'};
+function req(m,u,b,cb){var x=new XMLHttpRequest();x.open(m,u,true);x.setRequestHeader('Content-Type','application/json');x.onreadystatechange=function(){if(x.readyState===4){var j=null;try{j=JSON.parse(x.responseText);}catch(e){}cb(x.status,j||{});}};x.send(b?JSON.stringify(b):null);}
+var GM=null;
+function gload(cb){req('GET','/web/api/gacha/machines?userId='+encodeURIComponent(USER_ID),null,function(st,j){GM=j;cb(j);});}
+function setMix(ids,cb){req('POST','/web/api/gacha/mix',{userId:USER_ID,ids:ids},function(st,j){if(st!==200)alert(j.error||'Error');else GM.mix=j.mix;cb();});}
+function gachas(q){gload(function(G){if(!G||!G.machines)return page('Crank-a-kai','<p class=""muted"">No crank-a-kai data.</p>');
+ var s=G.settings,mix=G.mix||[];
+ var top='<div class=""box""><h2>&#127920; '+G.machines.length+' machines</h2><p class=""muted"">Every crank-a-kai of the game with its Yo-kai. Tap one for its lineup.'+
+  (s.coinShop==='free'?' You can get <b>'+G.coinsLeft+'</b> more free coin'+(G.coinsLeft===1?'':'s')+' today.':s.coinShop==='ymoney'?' Coins cost '+s.coinPriceYMoney+' Y-Money.':'')+'</p>'+
+  (s.allowMix?'<p><b>My mix:</b> '+(mix.length?'your Y-Money crank-a-kai draws from <b>'+mix.length+'</b> machine'+(mix.length===1?'':'s')+' <button class=""act"" id=""mclear"">Back to normal</button>':'off - add machines to mix them into your Y-Money crank-a-kai.')+'</p>':'')+
+  '<input id=""gq"" placeholder=""Search machines..."" value=""'+esc(q||'')+'"" style=""width:100%;box-sizing:border-box""></div>';
+ var rows=G.machines.map(function(m){var on=mix.indexOf(m.id)>=0;
+  return '<div class=""row"" style=""display:block"" data-go=""#/g/'+m.id+'"" data-n=""'+esc((m.name+' '+m.coin+' '+m.id).toLowerCase())+'""><div class=""t"">'+(on?'&#11088; ':'')+esc(m.name)+'</div><div class=""muted"">'+esc(m.price)+(m.pulls>1?' &middot; '+m.pulls+' pulls':'')+' &middot; '+m.yokai+' Yo-kai'+(m.featured?' &middot; '+m.featured+' featured':'')+' &middot; <span class=""pill"">'+SRC[m.source]+'</span></div></div>';}).join('');
+ page('Crank-a-kai',top+'<div class=""box"" id=""glist"">'+rows+'</div>');
+ var f=function(){var v=$('gq').value.toLowerCase(),c=$('glist').children;for(var i=0;i<c.length;i++)c[i].style.display=c[i].getAttribute('data-n').indexOf(v)>=0?'block':'none';};
+ $('gq').oninput=f;f();if($('mclear'))$('mclear').onclick=function(){setMix([],function(){gachas($('gq').value);});};});}
+function gacha(id){var show=function(){get('/web/api/gacha/machine/'+encodeURIComponent(id),function(g){if(!g||!g.tiers)return page('Crank-a-kai','Not found');
+ var s=GM.settings,mix=GM.mix||[],on=mix.indexOf(g.id)>=0;
+ var acts='';
+ if(g.coin&&s.coinShop!=='off')acts+='<button class=""act"" id=""gcoin"">Get a '+esc(g.coin)+(s.coinShop==='ymoney'?' ('+s.coinPriceYMoney+' Y-Money)':' (free, '+GM.coinsLeft+' left today)')+'</button> ';
+ if(s.allowMix)acts+='<button class=""act"" id=""gmix"">'+(on?'Remove from my mix':'Add to my mix')+'</button>';
+ var h='<div class=""box""><h2>'+esc(g.name)+'</h2><p class=""muted"">'+(g.pulls>1?g.pulls+' Yo-kai per pull &middot; ':'')+'<span class=""pill"">'+SRC[g.source]+'</span>'+
+  (g.source==='built'?' The real pool is not known: this lineup is the Yo-kai that came out with the machine, on top of the regular Yo-kai.':'')+'</p>'+acts+'<p class=""muted"" id=""gmsg""></p></div>';
+ h+='<div class=""box"">'+g.tiers.map(function(t){return '<details'+(t.yokai.some(function(y){return y.featured;})?' open':'')+'><summary>Rank '+esc(t.rank)+(t.chance!=null?' &middot; '+t.chance+'%':'')+' ('+t.yokai.length+')</summary><div class=""mini"">'+
+  t.yokai.map(function(y){return '<span data-go=""#/y/'+y.id+'""><i'+im(y.image)+'></i>'+(y.featured?'&#11088;':'')+esc(y.name)+'</span>';}).join('')+'</div></details>';}).join('')+'</div>';
+ page(g.name,h);
+ if($('gcoin'))$('gcoin').onclick=function(){req('POST','/web/api/gacha/coin',{userId:USER_ID,id:g.id},function(st,j){if(st!==200){$('gmsg').textContent=j.error||'Error';return;}
+  GM.coinsLeft=j.coinsLeft;$('gmsg').textContent='You got a '+j.coin+'! Open the Crank-a-kai menu again to use it.';});};
+ if($('gmix'))$('gmix').onclick=function(){var m=(GM.mix||[]).slice(),i=m.indexOf(g.id);if(i>=0)m.splice(i,1);else m.push(g.id);setMix(m,show);};});};
+ if(GM)show();else gload(show);}
 function guides(){page('Guides','<div class=""box"">'+IDX.articles.map(function(a){return '<div class=""row"" data-go=""#/a/'+a.id+'""><div class=""t"">'+a.icon+' '+esc(a.title)+'</div></div>';}).join('')+'</div>');}
 function article(id){get('/web/api/wiki/article/'+encodeURIComponent(id),function(a){if(!a)return page('Guide','Not found');page(a.title.replace(/&[^;]+;/g,''),'<div class=""box""><h2>'+a.icon+' '+esc(a.title)+'</h2>'+a.html+'</div>');});}
 function server(){var s=IDX.settings;var x=function(v){return v===1?'normal':'x'+v;};

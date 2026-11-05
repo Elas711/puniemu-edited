@@ -75,6 +75,10 @@ pre{white-space:pre-wrap;font-size:12px;max-height:520px;overflow:auto;margin:0}
 <div class=""row""><label>Y-Money multiplier <input id=""sy"" type=""number"" step=""0.1"" min=""0"" style=""width:90px""></label><label>EXP multiplier <input id=""sx"" type=""number"" step=""0.1"" min=""0"" style=""width:90px""></label><label><input type=""checkbox"" id=""si""> Infinite spirits</label></div>
 <h2 style=""margin-top:14px"">News (shown on the in-game notice &amp; portal pages)</h2><textarea id=""smotd""></textarea>
 <h2 style=""margin-top:14px"">Maintenance</h2><div class=""row""><label><input type=""checkbox"" id=""sm""> Maintenance mode (players get the message below)</label></div><textarea id=""smm""></textarea>
+<h2 style=""margin-top:14px"">Crank-a-kai</h2><div class=""row""><label>Coins on the in-game Crank-a-kai page <select id=""gcs""><option value=""off"">off</option><option value=""free"">free, per day</option><option value=""ymoney"">for Y-Money</option></select></label>
+<label>Free coins a day <input id=""gfree"" type=""number"" min=""0"" style=""width:70px""></label><label>Price (Y-Money) <input id=""gprice"" type=""number"" min=""0"" style=""width:90px""></label></div>
+<div class=""row""><label><input type=""checkbox"" id=""gmix""> Players may mix machines into their Y-Money crank-a-kai</label></div>
+<div class=""row""><label>Server mix (machine ids, used by everyone without their own mix) <input id=""gsmix"" placeholder=""e.g. 9065, 9285"" size=""30""></label><span class=""muted"">Machine ids are on the wiki's Crank-a-kai page.</span></div>
 <div class=""row"" style=""margin-top:10px""><button class=""act"" id=""ssave"">Save settings</button><button class=""ghost"" id=""sflush"">Save all accounts to DB now</button></div></div>
 <div class=""card""><h2>Translation</h2><p class=""muted"" id=""tstat""></p>
 <div class=""row""><button class=""ghost"" id=""tdl"">Download untranslated texts</button><span class=""muted"">Translate them by hand or with Tools/machine_translate.py, put the file in Translations/&lt;language&gt;/ and restart.</span></div></div></section>
@@ -104,6 +108,7 @@ function load(t){
    tile('Translation',o.translation.language?o.translation.language+': '+o.translation.translated+' texts, '+o.translation.remaining+' left':'off')+tile('Maintenance',o.state.maintenanceMode?'ON':'off');
   $('endpoints').innerHTML='<tr><th>Path</th><th>Requests</th><th>Errors</th><th>Avg ms</th></tr>'+m.endpoints.map(function(e){return '<tr><td>'+esc(e.path)+'</td><td>'+e.count+'</td><td>'+e.errors+'</td><td>'+e.avgMs+'</td></tr>';}).join('');
   if(t==='settings'){var tr=o.translation;$('tstat').textContent=tr.language?('Language '+tr.language+': '+tr.entries+' dictionary entries, '+tr.translated+' texts translated ('+tr.romaji+' katakana names as romaji), '+tr.remaining+' still Japanese. The export holds '+tr.untranslatedDistinct+' different texts (including the romaji names).'):'Translation is off (set Language in appsettings.json).';}
+  if(t==='settings'&&STATE.gacha){var g=STATE.gacha;$('gcs').value=g.coinShop;$('gfree').value=g.freeCoinsPerDay;$('gprice').value=g.coinPriceYMoney;$('gmix').checked=g.allowMix;$('gsmix').value=(g.serverMix||[]).join(', ');}
   if(t==='settings'){$('sy').value=STATE.ymoneyMultiplier;$('sx').value=STATE.expMultiplier;$('si').checked=STATE.infiniteSpirits;$('smotd').value=STATE.motd;$('sm').checked=STATE.maintenanceMode;$('smm').value=STATE.maintenanceMessage;}
   if(t==='gifts')$('flist').innerHTML='<tr><th>Created</th><th>Message</th><th>Contents</th><th></th></tr>'+STATE.gifts.map(function(g){return '<tr><td>'+esc(g.created)+'</td><td>'+esc(g.message)+'</td><td>'+
    esc((g.ymoney?g.ymoney+' Y-Money ':'')+(g.spirits?g.spirits+' spirits ':'')+g.items.map(function(i){return i.id+'x'+i.count;}).join(' ')+(g.youkai.length?' Yo-kai '+g.youkai.join(','):''))+
@@ -161,7 +166,8 @@ $('ifile').onchange=function(){var f=this.files[0];if(!f||!confirm('Replace this
 $('ban').onclick=function(){api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/ban',{reason:$('breason').value}).then(function(){toast('Banned');openPlayer(CUR);}).catch(fail);};
 $('unban').onclick=function(){api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/unban').then(function(){toast('Unbanned');openPlayer(CUR);}).catch(fail);};
 $('fsend').onclick=function(){api('POST','/admin/api/gifts',{message:$('fm').value,ymoney:+$('fy').value,spirits:+$('fs').value,items:parseItems($('fi').value),youkai:parseIds($('fk').value)}).then(function(){toast('Gift created');load('gifts');}).catch(fail);};
-$('ssave').onclick=function(){api('POST','/admin/api/settings',{ymoneyMultiplier:+$('sy').value,expMultiplier:+$('sx').value,infiniteSpirits:$('si').checked,motd:$('smotd').value,maintenanceMode:$('sm').checked,maintenanceMessage:$('smm').value}).then(function(){toast('Settings saved');}).catch(fail);};
+$('ssave').onclick=function(){api('POST','/admin/api/settings',{gacha:{coinShop:$('gcs').value,freeCoinsPerDay:+$('gfree').value,coinPriceYMoney:+$('gprice').value,allowMix:$('gmix').checked,
+ serverMix:$('gsmix').value.split(/[^0-9]+/).filter(function(x){return x;}).map(Number)},ymoneyMultiplier:+$('sy').value,expMultiplier:+$('sx').value,infiniteSpirits:$('si').checked,motd:$('smotd').value,maintenanceMode:$('sm').checked,maintenanceMessage:$('smm').value}).then(function(){toast('Settings saved');}).catch(fail);};
 $('sflush').onclick=function(){api('POST','/admin/api/flush').then(function(){toast('All accounts saved');}).catch(fail);};
 if(T)load('overview');
 </script></body></html>";

@@ -72,6 +72,12 @@ Files shipped in `Translations/en/`:
 * `names.fandom.json` - about 3,900 Japanese -> English Yo-kai / character / item names from the
   [Yo-kai Watch Fandom wiki](https://yokaiwatch.fandom.com) (CC BY-SA 3.0). Refresh it with
   `python Tools/fetch_fandom_names.py --out Translations/en/names.fandom.json`,
+* `names_anime.json` - official English names of collab characters (Levi, Lelouch Lamperouge,
+  Frieren, Conan Edogawa...) from [AniList](https://anilist.co): the tool reads the characters of every
+  collab series and keeps the names that are Yo-kai in the game data (character Yo-kai only, official
+  Wibble Wobble names are never replaced, a given name alone only fills a gap). Refresh it with
+  `python Tools/fetch_anime_names.py --resources Resources --out Translations/en/names_anime.json`;
+  add a collab to `SERIES` in the tool. Rerun the machine translation afterwards so dialogue uses them,
 * `patterns.json` - rules for numbered texts: stage names, star conditions, missions, crank-a-kai
   stamp bonuses...
 

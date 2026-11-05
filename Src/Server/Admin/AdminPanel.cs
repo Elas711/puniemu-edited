@@ -273,6 +273,16 @@ namespace Puniemu.Src.Server.Admin
                     if (b["ymoneyMultiplier"] != null) s.YMoneyMultiplier = Math.Clamp(b.Value<double>("ymoneyMultiplier"), 0, 100);
                     if (b["expMultiplier"] != null) s.ExpMultiplier = Math.Clamp(b.Value<double>("expMultiplier"), 0, 100);
                     if (b["infiniteSpirits"] != null) s.InfiniteSpirits = b.Value<bool>("infiniteSpirits");
+                    if (b["gacha"] is JObject g)
+                    {
+                        var mode = g.Value<string>("coinShop");
+                        if (mode is "off" or "free" or "ymoney") s.Gacha.CoinShop = mode;
+                        if (g["freeCoinsPerDay"] != null) s.Gacha.FreeCoinsPerDay = Math.Clamp(g.Value<int>("freeCoinsPerDay"), 0, 1000);
+                        if (g["coinPriceYMoney"] != null) s.Gacha.CoinPriceYMoney = Math.Clamp(g.Value<int>("coinPriceYMoney"), 0, 100000000);
+                        if (g["allowMix"] != null) s.Gacha.AllowMix = g.Value<bool>("allowMix");
+                        if (g["serverMix"] is JArray mix)
+                            s.Gacha.ServerMix = mix.Select(x => x.Value<int?>() ?? 0).Where(x => x > 0).Distinct().Take(Puniemu.Src.Server.Gacha.GachaChoice.MAX_MIX).ToList();
+                    }
                 });
                 Log.Info("admin", "settings changed");
                 return ServerStateStore.Current;

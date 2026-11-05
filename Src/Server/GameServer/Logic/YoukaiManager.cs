@@ -118,16 +118,17 @@ namespace Puniemu.Src.Server.GameServer.Logic
                 await MissionManager.UpdateProgress(gdkey, MissionType.BefriendSpecificYokai, (int)YoukaiId, um, manualMissionSave);
                 await MissionManager.UpdateProgress(gdkey, MissionType.GetSpecificYokaiToLevel, (int)YoukaiId, progressToUpdate2: 1, paramUserMission: um, manualSave: manualMissionSave);
                 // add new youkai
-                var tmpIdx = 0;
-
-                var levelType = int.Parse(YoukaiMstTable.Table[MstYoukaiIndex][5]);
-                foreach (string[] str in YoukaiLevelMstTable.Table)
-                {
-                    if (str[0] == levelType.ToString() && str[1] == "1")
-                        break;
-                    tmpIdx++;
-                }
-                userYokai.AddItem(new YwpUserYoukai { YoukaiId = YoukaiId, Level = 1, Exp = 0, Hp =  int.Parse(YoukaiMstTable.Table[MstYoukaiIndex][8]), Atk = int.Parse(YoukaiMstTable.Table[MstYoukaiIndex][10]), ExpDenominator = int.Parse(YoukaiLevelMstTable.Table[tmpIdx][3]), ExpNumerator = 0, Percentage = 0, BefriendDate = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), BreakLimitCount = 0 });
+                if (MstYoukaiIndex == -1) throw new InvalidDataException($"Yo-kai {YoukaiId} is not in ywp_mst_youkai");
+                var mst = YoukaiMstTable.Table[MstYoukaiIndex];
+                var levelType = mst.Length > 5 ? mst[5] : "";
+                // EXP needed for level 2: the level-1 row of the Yo-kai's level curve (the first row of
+                // the curve, or a default, when the data has no level-1 row for it)
+                var levelRow = YoukaiLevelMstTable.Table.FirstOrDefault(x => x.Length > 3 && x[0] == levelType && x[1] == "1")
+                            ?? YoukaiLevelMstTable.Table.FirstOrDefault(x => x.Length > 3 && x[0] == levelType);
+                int expDenominator = levelRow != null && int.TryParse(levelRow[3], out var ed) ? ed : 100;
+                int.TryParse(mst.Length > 8 ? mst[8] : "0", out var hp);
+                int.TryParse(mst.Length > 10 ? mst[10] : "0", out var atk);
+                userYokai.AddItem(new YwpUserYoukai { YoukaiId = YoukaiId, Level = 1, Exp = 0, Hp = hp, Atk = atk, ExpDenominator = expDenominator, ExpNumerator = 0, Percentage = 0, BefriendDate = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), BreakLimitCount = 0 });
 
             }
             AddYoukaiSkill(ref userSkill, YoukaiId);
