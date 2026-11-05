@@ -141,7 +141,9 @@ How to choose:
 * **In game**: open **Help** in the menu and tap the **Events & Server** button. Every player can
   pick their own events (can be disabled in the admin panel). Return to the title screen afterwards.
 
-The lists show each event's original dates and, when the data has them, the characters that appear
+An **event history** of the live game (151 events in 26 series) is included: players can browse it in
+game, and linking an entry to event ids in the admin panel gives those events their real English
+names. The lists also show each event's original dates and, when the data has them, the characters that appear
 in the event's story, to help recognise unnamed events. See [Events/README.md](Events/README.md) for
 event packs and friendly names (`Events/names.json`).
 

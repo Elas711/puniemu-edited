@@ -57,6 +57,64 @@ namespace Puniemu.Src.Server.Events
         private static HashSet<string> _transformTables = new();
         private static readonly ConcurrentDictionary<string, string> _servedCache = new();
 
+        private static EventHistory _history = new();
+        private static readonly object _historyFileLock = new();
+
+        public static EventHistory History
+        {
+            get { lock (_catalogLock) return _history; }
+        }
+
+        private static string HistoryPath(string dir) => Path.Combine(dir, "history.json");
+
+        private static EventHistory LoadHistory(string dir)
+        {
+            var file = HistoryPath(dir);
+            if (!File.Exists(file)) return new EventHistory();
+            try
+            {
+                return JsonConvert.DeserializeObject<EventHistory>(File.ReadAllText(file)) ?? new EventHistory();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("events", $"Could not read history.json: {ex.Message}");
+                return new EventHistory();
+            }
+        }
+
+        // Links a history entry to event ids (admin panel) and saves history.json.
+        public static void LinkHistory(string series, string name, List<long> ids)
+        {
+            var dir = DataManager.Logic.DataManager.ResolvePath(DataManager.Logic.DataManager.EventsPath);
+            lock (_historyFileLock)
+            {
+                var history = LoadHistory(dir);
+                var s = history.Series.FirstOrDefault(x => x.Series == series) ?? throw new KeyNotFoundException("Unknown series");
+                var e = s.Events.FirstOrDefault(x => x.Name == name) ?? throw new KeyNotFoundException("Unknown event");
+                e.EventIds = ids.Distinct().ToList();
+                Directory.CreateDirectory(dir);
+                File.WriteAllText(HistoryPath(dir), JsonConvert.SerializeObject(history, Formatting.Indented));
+            }
+            Reload();
+        }
+
+        // History with, for every entry, whether this server has data for it.
+        public static object DescribeHistory()
+        {
+            var catalog = Catalog.ToDictionary(x => x.EventId);
+            return History.Series.Select(s => new
+            {
+                category = s.Category,
+                series = s.Series,
+                events = s.Events.Select(h => new
+                {
+                    name = h.Name,
+                    eventIds = h.EventIds,
+                    available = h.EventIds.Any(id => catalog.TryGetValue(id, out var e) && e.Selectable)
+                })
+            });
+        }
+
         public static IReadOnlyCollection<EventInfo> Catalog
         {
             get { lock (_catalogLock) return _catalog.Values.OrderBy(x => x.EventId).ToList(); }
@@ -181,7 +239,8 @@ namespace Puniemu.Src.Server.Events
                 foreach (var file in Directory.EnumerateFiles(dir, "*.json", SearchOption.AllDirectories).OrderBy(x => x))
                 {
                     var fileName = Path.GetFileName(file);
-                    if (fileName.Equals("names.json", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (fileName.Equals("names.json", StringComparison.OrdinalIgnoreCase) ||
+                        fileName.Equals("history.json", StringComparison.OrdinalIgnoreCase)) continue;
                     try
                     {
                         var packs = new List<EventPack>();
@@ -241,6 +300,17 @@ namespace Puniemu.Src.Server.Events
                 }
             }
 
+            // Event history: names of every event of the live game, optionally linked to ids
+            var history = LoadHistory(dir);
+            foreach (var s in history.Series)
+                foreach (var h in s.Events)
+                    foreach (var id in h.EventIds)
+                        if (catalog.TryGetValue(id, out var e))
+                        {
+                            e.Name = h.Name;
+                            e.Series = s.Series;
+                        }
+
             MergePacksIntoGameData(dataPacks.Concat(catalog.Values.Where(x => x.Pack != null).Select(x => x.Pack!)).ToList());
 
             foreach (var e in catalog.Values)
@@ -252,6 +322,7 @@ namespace Puniemu.Src.Server.Events
 
             lock (_catalogLock)
             {
+                _history = history;
                 _catalog = catalog;
                 _transformTables = transformTables;
             }

@@ -50,10 +50,12 @@ namespace Puniemu.Src.Server.Web
                 serverMode = s.Mode,
                 serverActive = serverIds,
                 choice = choice ?? new PlayerEventChoice(),
+                history = EventManager.DescribeHistory(),
                 events = EventManager.Catalog.Where(x => x.Selectable).Select(x => new
                 {
                     eventId = x.EventId,
                     name = x.Name,
+                    series = x.Series,
                     description = x.Description,
                     period = x.Period,
                     playable = x.Playable,
@@ -140,6 +142,7 @@ button.sec{background:#f1e6d6;color:var(--ink)}
 </div>
 <p class=""muted"">After saving, go back to the title screen (or restart the game) so the new event data is loaded.</p>
 <div id=""msg""></div></div>
+<div class=""card""><h2>Event history</h2><p class=""muted"">Every event of the live game. <b>Playable here</b> ones can be ticked in the list below.</p><div id=""hist"" class=""muted"">Loading...</div></div>
 <div class=""card""><h2>Event list</h2>
 <input type=""search"" id=""filter"" placeholder=""Search events..."">
 <div id=""list"" class=""muted"">Loading...</div></div>
@@ -160,7 +163,7 @@ function render(){
     var text=(e.name+' '+e.eventId+' '+(e.description||'')).toLowerCase(); if(f&&text.indexOf(f)<0)return;
     h+='<label class=""ev""><input type=""checkbox"" data-id=""'+e.eventId+'""'+(chosen[e.eventId]?' checked':'')+(custom?'':' disabled')+'>'+
       '<span><b>'+esc(e.name)+'<span class=""tag"">#'+e.eventId+'</span>'+(e.playable?'':'<span class=""tag"">no maps</span>')+'</b>'+
-      '<small>'+esc(e.period||'')+(e.maps?' &middot; '+e.maps+' map(s)':'')+'</small>'+(e.description?'<small>'+esc(e.description)+'</small>':'')+'</span></label>';
+      '<small>'+(e.series?esc(e.series)+' &middot; ':'')+esc(e.period||'')+(e.maps?' &middot; '+e.maps+' map(s)':'')+'</small>'+(e.description?'<small>'+esc(e.description)+'</small>':'')+'</span></label>';
   });
   $('list').innerHTML=h||'<p class=""muted"">No events found in the server data.</p>';
   var boxes=$('list').querySelectorAll('input[type=checkbox]');
@@ -173,6 +176,10 @@ function load(){req('GET','/web/api/events?userId='+encodeURIComponent(USER_ID),
   if(!j.allowPlayerChoice){$('choiceCard').innerHTML='<h2>Events</h2><p class=""muted"">The server owner chooses the events on this server.</p>';$('save').disabled=true;}
   else if(!j.known){$('msg').innerHTML='Open this page from the in-game <b>Help</b> menu to save your choice.';}
   var r=document.getElementsByName('mode');for(var i=0;i<r.length;i++){r[i].checked=(r[i].value===(j.choice.mode||'server'));r[i].onchange=render;}
+  var hh='';(j.history||[]).forEach(function(s){var n=s.events.filter(function(e){return e.available;}).length;
+    hh+='<details><summary><b>'+esc(s.series)+'</b> <span class=""tag"">'+esc(s.category)+'</span> <small>'+n+'/'+s.events.length+' playable here</small></summary><ul>'+
+    s.events.map(function(e){return '<li>'+esc(e.name)+(e.available?' <span class=""tag"" style=""background:#d3f9d8;color:#2b8a3e"">playable here</span>':'')+'</li>';}).join('')+'</ul></details>';});
+  $('hist').innerHTML=hh||'No event history on this server.';
   render();});}
 $('filter').oninput=render;
 $('all').onclick=function(){if(mode()!=='custom')return;data.choice.ids=data.events.map(function(e){return e.eventId;});render();};

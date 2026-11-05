@@ -54,6 +54,17 @@ python Tools/import_dumps.py --current Resources --dumps path/to/extracted/dumps
 Pack rows are added to the game data at startup (so map warps and stages of imported maps work),
 but the maps stay closed until the event is selected. Sub folders of `Events/` are scanned too.
 
+## Event history
+
+`history.json` lists the events of the live game (26 series, 151 events: story series such as
+Ginga Watch, Dragonslayers, Nyarthur and Shogi, collaborations, anniversaries and seasonal events),
+compiled from the names in a community archive of the game's event art. Players can browse it in game
+(**Help → Events & Server**) and see which events are playable on your server.
+
+The game data only knows events by number, so link them: admin panel → Events → **Event history**,
+type the event ids that belong to an entry and press **Link**. Linked events get the English name and
+series in every list. The links are saved in `history.json`.
+
 ## Friendly names
 
 `names.json` lets you give events readable names:

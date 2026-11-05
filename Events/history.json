@@ -1,0 +1,765 @@
+{
+ "_info": "Puni Puni event history (names only), compiled from the community archive's folder index. Add the event ids from your data to \"eventIds\" to give those events these names and group them here.",
+ "series": [
+  {
+   "category": "Puni Puni story series",
+   "series": "100 Tales",
+   "events": [
+    {
+     "name": "Event 0: Snow Palace Park",
+     "eventIds": []
+    },
+    {
+     "name": "Event 1: Passionate Hula Festival",
+     "eventIds": []
+    },
+    {
+     "name": "Event 2: Midsummer's Love Bachelor",
+     "eventIds": []
+    },
+    {
+     "name": "Event 3: The Great Yo-kai World Spirit Festival",
+     "eventIds": []
+    },
+    {
+     "name": "Event 4: Yo-kai Sports Festival",
+     "eventIds": []
+    },
+    {
+     "name": "Event 5: Yo-kai Valentines",
+     "eventIds": []
+    },
+    {
+     "name": "Event 6: The Birth of the AI Robot Yo-kai",
+     "eventIds": []
+    },
+    {
+     "name": "Event 7: Rainy Season",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Bousou",
+   "events": [
+    {
+     "name": "Dr. LB and His Goons",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Color Legends",
+   "events": [
+    {
+     "name": "Color Legends",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Crystal Legends",
+   "events": [
+    {
+     "name": "Crystal Legends",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Fusion",
+   "events": [
+    {
+     "name": "Event 1: Warushine Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 2: Kirachara Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 3: Nandakinryuu Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 4: Saku-chan Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 5: Bunny-Eat Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 6: NEETETSU Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 7: Shion Arc",
+     "eventIds": []
+    },
+    {
+     "name": "SP Event 1: Fusion New Years",
+     "eventIds": []
+    },
+    {
+     "name": "SP Event 2: Fusion Epilogue",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Ginga Watch",
+   "events": [
+    {
+     "name": "Event 1: Death Mercury Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 2: Death Mars Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 3: Death Jupiter Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 4: Death Black Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 5: Moon Sisters Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 6: Moon People Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 7: Two Suns Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event SP1: Moon Festival",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Goku",
+   "events": [
+    {
+     "name": "Goku",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Half-Demon Dragonslayers DS SP",
+   "events": [
+    {
+     "name": "Cloned Dragonslayers",
+     "eventIds": []
+    },
+    {
+     "name": "Fukuri Yuu and Orochi Shuu",
+     "eventIds": []
+    },
+    {
+     "name": "Hakuryuu and Kokuryuu",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Half-Demon Dragonslayers DS1",
+   "events": [
+    {
+     "name": "Event 1: Orochi Shuu VS Death Dragon",
+     "eventIds": []
+    },
+    {
+     "name": "Event 2: Trial of Fighting Spirit",
+     "eventIds": []
+    },
+    {
+     "name": "Event 3: Trial of Righteousness",
+     "eventIds": []
+    },
+    {
+     "name": "Event 4: Trial of Innocence",
+     "eventIds": []
+    },
+    {
+     "name": "Event 5: Secret Ceremony",
+     "eventIds": []
+    },
+    {
+     "name": "Final Event: The Final Battle, Ryuuta's Awakening",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Half-Demon Dragonslayers DS2",
+   "events": [
+    {
+     "name": "Event 1: Investigators from the Star Dragon World",
+     "eventIds": []
+    },
+    {
+     "name": "Event 2: Dark Clouds over the Light Dragon Continent",
+     "eventIds": []
+    },
+    {
+     "name": "Event 3: The Fall of the Nether Dragon Continent",
+     "eventIds": []
+    },
+    {
+     "name": "Event 4: The Dragon Hermits' Village",
+     "eventIds": []
+    },
+    {
+     "name": "Event 5: Trials for the Three Sacred Treasures",
+     "eventIds": []
+    },
+    {
+     "name": "Final Chapter Part 1",
+     "eventIds": []
+    },
+    {
+     "name": "Final Chapter Part 2",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Idol Royale Season 1",
+   "events": [
+    {
+     "name": "Event #1: Deathmatch Self-Introduction!",
+     "eventIds": []
+    },
+    {
+     "name": "Event #2: Death Campfire Live!!",
+     "eventIds": []
+    },
+    {
+     "name": "Event #3:The I-1 Preliminaries",
+     "eventIds": []
+    },
+    {
+     "name": "Event #4: The I-1 Preliminary Finals",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Idol Royale Season 2",
+   "events": [
+    {
+     "name": "Event #1 (title unknown)",
+     "eventIds": []
+    },
+    {
+     "name": "Event #2 (title unknown)",
+     "eventIds": []
+    },
+    {
+     "name": "Event #3 (title unknown)",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Kuroi",
+   "events": [
+    {
+     "name": "Kuroi",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Nyarthur",
+   "events": [
+    {
+     "name": "Event #1: The Birth of King Nyarthur",
+     "eventIds": []
+    },
+    {
+     "name": "Event #2: Nyarthur in England",
+     "eventIds": []
+    },
+    {
+     "name": "Event #3: Nyarthur in France",
+     "eventIds": []
+    },
+    {
+     "name": "Event #4: Nyarthur in Rome",
+     "eventIds": []
+    },
+    {
+     "name": "Event #5: Nyarthur in Germany",
+     "eventIds": []
+    },
+    {
+     "name": "Event #6: Holy Grail Arc Part 1",
+     "eventIds": []
+    },
+    {
+     "name": "Event #7: Holy Grail Arc Part 2",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "PuniPuni vs KachiKachi",
+   "events": [
+    {
+     "name": "Kachi Kachi",
+     "eventIds": []
+    },
+    {
+     "name": "Puni Puni",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Punigami no Yami",
+   "events": [
+    {
+     "name": "Event 1: Jikokuten Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 2: Komokuten Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 3: Zochoten Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 4: Tamonten Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 5: Yo-kai World Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 6: Punigami Kegare Arc Part 1",
+     "eventIds": []
+    },
+    {
+     "name": "Event 7: Punigami Kegare Arc Part 2",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Reborn",
+   "events": [
+    {
+     "name": "Reborn",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Puni Puni story series",
+   "series": "Shogi",
+   "events": [
+    {
+     "name": "Event #1: Great King's Rook vs. Snake King's Knight",
+     "eventIds": []
+    },
+    {
+     "name": "Event #2: Great King's Pawn vs. Snake King's Lance",
+     "eventIds": []
+    },
+    {
+     "name": "Event #3: Great King's Knight vs. Snake King's Bishop",
+     "eventIds": []
+    },
+    {
+     "name": "Event #4: Great King's Lance vs. Snake King's Rook",
+     "eventIds": []
+    },
+    {
+     "name": "Event #5: Great King's Silver General vs. Snake King's Golden General",
+     "eventIds": []
+    },
+    {
+     "name": "Event #6: Great King's Bishop vs. Snake King's Pawn",
+     "eventIds": []
+    },
+    {
+     "name": "Event #7: Great King's Gold General vs. Snake King's Silver General",
+     "eventIds": []
+    },
+    {
+     "name": "Event #8: Kings vs Goddess",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Mainline game tie-ins",
+   "series": "Yo-kai Gakuen Y",
+   "events": [
+    {
+     "name": "Event 10: Ancients vs Majins",
+     "eventIds": []
+    },
+    {
+     "name": "Event 11: Earthman Arrives",
+     "eventIds": []
+    },
+    {
+     "name": "Event 1: YGakuen Movie Collab",
+     "eventIds": []
+    },
+    {
+     "name": "Event 2: Alien Invasion Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 3: Gakkouga Y Awakens",
+     "eventIds": []
+    },
+    {
+     "name": "Event 4: Blue Moon Awakens",
+     "eventIds": []
+    },
+    {
+     "name": "Event 5: Summer Break Arc",
+     "eventIds": []
+    },
+    {
+     "name": "Event 6: Magical Girl Arrives",
+     "eventIds": []
+    },
+    {
+     "name": "Event 7: Kiraboshi Castle Assault",
+     "eventIds": []
+    },
+    {
+     "name": "Event 8: Gakkouga Enma Attacks!",
+     "eventIds": []
+    },
+    {
+     "name": "Event 9: Final Fight against Mazera Bolt!",
+     "eventIds": []
+    },
+    {
+     "name": "Event SP: YGakuen Christmas",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Collaborations",
+   "series": "Collaborations",
+   "events": [
+    {
+     "name": "7DS",
+     "eventIds": []
+    },
+    {
+     "name": "AOT",
+     "eventIds": []
+    },
+    {
+     "name": "Code Geass",
+     "eventIds": []
+    },
+    {
+     "name": "Dissidia",
+     "eventIds": []
+    },
+    {
+     "name": "Eminence in Shadow",
+     "eventIds": []
+    },
+    {
+     "name": "Evangelion",
+     "eventIds": []
+    },
+    {
+     "name": "Frieren",
+     "eventIds": []
+    },
+    {
+     "name": "Hololive",
+     "eventIds": []
+    },
+    {
+     "name": "Kamen Rider",
+     "eventIds": []
+    },
+    {
+     "name": "Konosuba",
+     "eventIds": []
+    },
+    {
+     "name": "Kunitori Wars",
+     "eventIds": []
+    },
+    {
+     "name": "Monster Strike",
+     "eventIds": []
+    },
+    {
+     "name": "Mushoku Tensei",
+     "eventIds": []
+    },
+    {
+     "name": "Nijisanji",
+     "eventIds": []
+    },
+    {
+     "name": "Puyo Puyo",
+     "eventIds": []
+    },
+    {
+     "name": "Quintessential Quintuplets",
+     "eventIds": []
+    },
+    {
+     "name": "Re:Zero",
+     "eventIds": []
+    },
+    {
+     "name": "Shaman King",
+     "eventIds": []
+    },
+    {
+     "name": "Shonen Sunday",
+     "eventIds": []
+    },
+    {
+     "name": "Tensura",
+     "eventIds": []
+    },
+    {
+     "name": "Tokyo Revengers",
+     "eventIds": []
+    },
+    {
+     "name": "Ultraman",
+     "eventIds": []
+    },
+    {
+     "name": "Yo-Tuber",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Collaborations",
+   "series": "Level-5 All Stars",
+   "events": [
+    {
+     "name": "Fantasy Life",
+     "eventIds": []
+    },
+    {
+     "name": "Inazuma Eleven",
+     "eventIds": []
+    },
+    {
+     "name": "LBX",
+     "eventIds": []
+    },
+    {
+     "name": "Megaton Musashi",
+     "eventIds": []
+    },
+    {
+     "name": "Ni No Kuni",
+     "eventIds": []
+    },
+    {
+     "name": "Professor Layton",
+     "eventIds": []
+    },
+    {
+     "name": "Snack World",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Collaborations",
+   "series": "Other collaborations",
+   "events": [
+    {
+     "name": "Medalist",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Anniversaries",
+   "series": "Puni Puni anniversaries",
+   "events": [
+    {
+     "name": "Puni 100th Month Anni",
+     "eventIds": []
+    },
+    {
+     "name": "Puni Puni 10th Anniversary",
+     "eventIds": []
+    },
+    {
+     "name": "Puni Puni 10th Anniversary - Anni Part 1",
+     "eventIds": []
+    },
+    {
+     "name": "Puni Puni 10th Anniversary - Anni Part 2",
+     "eventIds": []
+    },
+    {
+     "name": "Puni Puni 10th Anniversary - Anni Part 4",
+     "eventIds": []
+    },
+    {
+     "name": "Puni Puni 8th Anniversary",
+     "eventIds": []
+    },
+    {
+     "name": "Puni Puni 9th Anniversary Event",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Anniversaries",
+   "series": "Yo-kai Watch series anniversaries",
+   "events": [
+    {
+     "name": "Series 10th Anniversary",
+     "eventIds": []
+    },
+    {
+     "name": "Series 10th Anniversary - Part 1",
+     "eventIds": []
+    },
+    {
+     "name": "Series 10th Anniversary - Part 2",
+     "eventIds": []
+    },
+    {
+     "name": "Series 11th Anniversary",
+     "eventIds": []
+    },
+    {
+     "name": "Series 12th Anniversary",
+     "eventIds": []
+    },
+    {
+     "name": "Series 13th Anniversary",
+     "eventIds": []
+    },
+    {
+     "name": "Series 8th Anniversary",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Seasonal & special",
+   "series": "Seasonal events",
+   "events": [
+    {
+     "name": "Autumn",
+     "eventIds": []
+    },
+    {
+     "name": "Festivals",
+     "eventIds": []
+    },
+    {
+     "name": "Halloween",
+     "eventIds": []
+    },
+    {
+     "name": "Puni Christmas",
+     "eventIds": []
+    },
+    {
+     "name": "Summer",
+     "eventIds": []
+    },
+    {
+     "name": "UZ+ New Years",
+     "eventIds": []
+    },
+    {
+     "name": "Wedding Wars",
+     "eventIds": []
+    }
+   ]
+  },
+  {
+   "category": "Seasonal & special",
+   "series": "Special events",
+   "events": [
+    {
+     "name": "Color Legendaries",
+     "eventIds": []
+    },
+    {
+     "name": "Crystal Generals",
+     "eventIds": []
+    },
+    {
+     "name": "Super Popular Yo-kai",
+     "eventIds": []
+    },
+    {
+     "name": "The Great Bloody Battle",
+     "eventIds": []
+    },
+    {
+     "name": "New Year's Special: Yo-kai First Shrine Visit 2025 ~YO! YO! New Enma! Check It Out!~",
+     "eventIds": []
+    },
+    {
+     "name": "YW Puni Puni 100 Months Anniversary Event: Night Parade of One Hundred Demons YO! YO! Yo-kai Parade",
+     "eventIds": []
+    },
+    {
+     "name": "YW Puni Puni 8th Anniversary Event: Super-dimensional!? The Strongest Tag Team Championship!",
+     "eventIds": []
+    },
+    {
+     "name": "YW Series 10th Anniversary Event: Lord Enma and the X (Cross) of Friendship, nyan",
+     "eventIds": []
+    },
+    {
+     "name": "YW Series 8th Anniversary Event: Dream Alliance! Great Youma Festival",
+     "eventIds": []
+    }
+   ]
+  }
+ ]
+}

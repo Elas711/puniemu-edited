@@ -19,6 +19,10 @@ namespace Puniemu.Src.Server.Events
         [JsonProperty("period")]
         public string Period { get; set; } = "";
 
+        // Series from Events/history.json, when linked.
+        [JsonProperty("series")]
+        public string Series { get; set; } = "";
+
         [JsonProperty("eventType")]
         public int EventType { get; set; }
 
@@ -86,6 +90,38 @@ namespace Puniemu.Src.Server.Events
 
         [JsonIgnore]
         public string FileName { get; set; } = "";
+    }
+
+    // One entry of Events/history.json: an event that existed in the live game. EventIds links it to
+    // the event ids found in the server data.
+    public class HistoryEvent
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; } = "";
+
+        [JsonProperty("eventIds")]
+        public List<long> EventIds { get; set; } = new();
+    }
+
+    public class HistorySeries
+    {
+        [JsonProperty("category")]
+        public string Category { get; set; } = "";
+
+        [JsonProperty("series")]
+        public string Series { get; set; } = "";
+
+        [JsonProperty("events")]
+        public List<HistoryEvent> Events { get; set; } = new();
+    }
+
+    public class EventHistory
+    {
+        [JsonProperty("_info")]
+        public string? Info { get; set; }
+
+        [JsonProperty("series")]
+        public List<HistorySeries> Series { get; set; } = new();
     }
 
     // What a player (or the server) wants to play.

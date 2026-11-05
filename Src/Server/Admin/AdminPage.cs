@@ -59,7 +59,9 @@ pre{white-space:pre-wrap;font-size:12px;max-height:520px;overflow:auto;margin:0}
 <div class=""row""><label><input type=""checkbox"" id=""ehide""> Close the maps of events that are not selected</label><label>Event length <input id=""edays"" type=""number"" min=""1"" style=""width:80px""> days</label></div>
 <div class=""row""><input id=""efilter"" placeholder=""Filter..."" style=""flex:1""><button class=""ghost"" id=""eall"">Select all</button><button class=""ghost"" id=""enone"">Clear</button><button class=""ghost"" id=""ereload"">Rescan data</button><button class=""act"" id=""esave"">Save</button></div>
 <p class=""muted"">Events are discovered from the loaded master data and from Events/*.json packs. Players must return to the title screen to receive the new event data.</p>
-<div class=""scroll""><table id=""elist""></table></div></div></section>
+<div class=""scroll""><table id=""elist""></table></div></div>
+<div class=""card""><h2>Event history</h2><p class=""muted"">Every event of the live game (Events/history.json). Enter the event ids from the list above that belong to an entry: those events get its name and series, and players see it as playable.</p>
+<input id=""hfilter"" placeholder=""Filter..."" style=""width:100%;margin-bottom:8px""><div class=""scroll""><table id=""hlist""></table></div></div></section>
 
 <section id=""t-gifts"" class=""hidden""><div class=""card""><h2>New server-wide gift</h2><p class=""muted"">Every player receives it once, on their next login (new players too).</p>
 <div class=""row""><input id=""fm"" placeholder=""Message / note"" style=""flex:1""></div>
@@ -105,7 +107,7 @@ function load(t){
  }).catch(fail);
  if(t==='events')api('GET','/admin/api/events').then(function(e){EV=e;var s=e.settings;document.querySelectorAll('[name=emode]').forEach(function(r){r.checked=r.value===s.mode;});
   $('eplayer').checked=s.allowPlayerChoice;$('ehide').checked=s.hideInactiveEventMaps;$('edays').value=s.eventDurationDays;$('rdays').value=s.rotationDays;$('rcount').value=s.rotationCount;
-  $('enow').textContent=e.runningNow?'Running now: '+e.runningNow.join(', '):'Running now: original data';renderEvents();}).catch(fail);
+  loadHistory();$('enow').textContent=e.runningNow?'Running now: '+e.runningNow.join(', '):'Running now: original data';renderEvents();}).catch(fail);
  if(t==='logs')api('GET','/admin/api/logs').then(function(l){$('logs').textContent=l.slice().reverse().join('\n');}).catch(fail);
 }
 function renderEvents(){var f=$('efilter').value.toLowerCase(),on={};EV.settings.activeEventIds.forEach(function(i){on[i]=1;});
@@ -114,6 +116,15 @@ function renderEvents(){var f=$('efilter').value.toLowerCase(),on={};EV.settings
   (e.playable?'':' <span class=""pill"">no maps</span>')+'</td><td>'+esc(e.period)+'</td><td>'+e.mapIds.length+'</td><td>'+esc(e.sources.join(', '))+'</td><td class=""muted"">'+esc(e.tables.join(', '))+'</td></tr>';}).join('');
  document.querySelectorAll('[data-e]').forEach(function(c){c.onchange=function(){var id=+c.dataset.e,a=EV.settings.activeEventIds,k=a.indexOf(id);if(c.checked&&k<0)a.push(id);if(!c.checked&&k>=0)a.splice(k,1);};});}
 $('efilter').oninput=renderEvents;
+var HIST=[];
+function loadHistory(){api('GET','/admin/api/events/history').then(function(h){HIST=h;renderHistory();}).catch(fail);}
+function renderHistory(){var f=$('hfilter').value.toLowerCase(),rows='<tr><th>Series</th><th>Event</th><th>Event ids</th><th></th></tr>';
+ HIST.forEach(function(s,si){s.events.forEach(function(e,ei){if((s.series+' '+e.name).toLowerCase().indexOf(f)<0)return;
+  rows+='<tr><td class=""muted"">'+esc(s.series)+'</td><td>'+esc(e.name)+(e.available?' <span class=""pill ok"">in data</span>':'')+'</td><td><input data-h=""'+si+'_'+ei+'"" value=""'+esc(e.eventIds.join(', '))+'"" size=""16""></td><td><button class=""ghost"" data-hs=""'+si+'_'+ei+'"">Link</button></td></tr>';});});
+ $('hlist').innerHTML=rows;
+ document.querySelectorAll('[data-hs]').forEach(function(b){b.onclick=function(){var k=b.dataset.hs.split('_'),s=HIST[+k[0]],e=s.events[+k[1]];
+  api('POST','/admin/api/events/history',{series:s.series,name:e.name,eventIds:parseIds(document.querySelector('[data-h=""'+b.dataset.hs+'""]').value)}).then(function(){toast('Linked');load('events');}).catch(fail);};});}
+$('hfilter').oninput=renderHistory;
 $('eall').onclick=function(){EV.settings.activeEventIds=EV.catalog.filter(function(e){return e.selectable;}).map(function(e){return e.eventId;});renderEvents();};
 $('enone').onclick=function(){EV.settings.activeEventIds=[];renderEvents();};
 $('ereload').onclick=function(){api('POST','/admin/api/events/reload').then(function(){toast('Rescanned');load('events');}).catch(fail);};

@@ -209,6 +209,20 @@ namespace Puniemu.Src.Server.Admin
                 return ServerStateStore.Current.Events;
             });
 
+            Api(app, "GET", "/admin/api/events/history", async ctx =>
+            {
+                await Task.CompletedTask;
+                return EventManager.DescribeHistory();
+            });
+
+            Api(app, "POST", "/admin/api/events/history", async ctx =>
+            {
+                var b = await ReadJson(ctx);
+                EventManager.LinkHistory(b.Value<string>("series") ?? "", b.Value<string>("name") ?? "",
+                    b["eventIds"]?.ToObject<List<long>>() ?? new());
+                return new { ok = true };
+            });
+
             Api(app, "POST", "/admin/api/events/reload", async ctx =>
             {
                 await Task.CompletedTask;
