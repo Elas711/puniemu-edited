@@ -120,6 +120,10 @@ namespace Puniemu.Src.Server.Events
         // Free text the server owner can add (tips, notes...)
         [JsonProperty("notes", NullValueHandling = NullValueHandling.Ignore)]
         public string? Notes { get; set; }
+
+        // When the event ran in the real game ("2022/12/16 - 2022/12/31"), one entry per run
+        [JsonProperty("dates", NullValueHandling = NullValueHandling.Ignore)]
+        public List<string>? Dates { get; set; }
     }
 
     public class HistoryCharacter

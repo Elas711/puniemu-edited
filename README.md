@@ -119,6 +119,9 @@ Same idea (server URL + launching zone), plus the protections of the Japanese cl
 here: in the 4.177.0 client the game server's host name is not stored as plain text anywhere (it
 is built at run time inside `libSGF.so`), so it cannot simply be replaced.
 
+[docs/EMULATOR.md](docs/EMULATOR.md) shows how to run the unmodified 4.177.0 client against Puniemu on
+an Android emulator (hosts redirect + your own CA, `Tools/make_certs.sh`).
+
 [docs/ARCHIVES.md](docs/ARCHIVES.md) lists where old game data survives (archive.org uploads of
 event caches, Wibble Wobble server data...) and how to get it.
 

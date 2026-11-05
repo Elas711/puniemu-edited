@@ -150,7 +150,8 @@ namespace Puniemu.Src.Server.Web
                 notes = ev.Notes,
                 available = linked.Any(x => x.Selectable),
                 eventIds = linked.Select(x => x.EventId),
-                period = string.Join(" / ", linked.Select(x => x.Period).Where(p => p.Length > 0).Distinct()),
+                period = ev.Dates is { Count: > 0 } ? string.Join(" / ", ev.Dates)
+                       : string.Join(" / ", linked.Select(x => x.Period).Where(p => p.Length > 0).Distinct()),
                 maps = mapNames.Where(n => n.Length > 0).Distinct().ToList(),
                 bonuses,
                 missions,

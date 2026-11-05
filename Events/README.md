@@ -111,3 +111,9 @@ an array of packs.
   pipe tables (`tableData`) take the rows as a `|` / `*` string. The table must exist in `Resources`.
 
 After adding or editing packs press **Rescan data** in the admin panel (or restart the server).
+
+## Dates
+
+`dates` of the collaboration events (when they ran in the real game) come from the collab list of the
+Japanese fan wiki [妖怪ウォッチぷにぷにwiki](https://punipuni.miraheze.org) (monthly dumps on archive.org).
+The Event Guide shows them as "Originally: ...".
