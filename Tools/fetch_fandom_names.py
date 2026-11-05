@@ -106,6 +106,9 @@ def main():
                 continue
             jp = clean_jp(m.group(1))
             en = clean_title(page["title"])
+            # page titles carry disambiguations ("Jaou Gun Ogama (Light)") the Japanese name does not have
+            if not re.search(r"[(（]", jp):
+                en = re.sub(r"\s*\([^)]*\)\s*$", "", en).strip()
             if jp and JP.search(jp) and en and not JP.search(en):
                 names.setdefault(jp, en)
         time.sleep(1)

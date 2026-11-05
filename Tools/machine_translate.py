@@ -101,6 +101,9 @@ def load_glossary(folder, extra):
             k = unicodedata.normalize("NFKC", k)
             if not JAPANESE.search(k) or JAPANESE.search(v) or "\n" in k:
                 continue
+            # "Saishuu Kessen (The final battle)": notes in brackets do not belong inside a sentence
+            if re.search(r"[()（）\[\]]", v):
+                continue
             # one-character terms only from the hand-made glossary
             if len(v.split()) > 4 or re.search(r"[.!?]$", v) or (len(k) < 2 and f != extra):
                 continue
@@ -172,7 +175,9 @@ def tidy(src, out, used):
     out = re.sub(r"(?<=[A-Za-z]):(?=[0-9+\-])", ": ", out)
     if "わざゲージ" in src or "ひっさつわざ" in src:
         out = re.sub(r"\b(?:S[A-Za-z]*)?[Uu]ltimate [Gg]auge", "Soultimate gauge", out)
-    if not SPEECH.search(src):
+    # a short text without any sentence mark is a name or label, even with "ニャ" in it
+    label = len(src) <= 20 and not re.search(r"[。！？!?…▽\n「」]", src)
+    if label or not SPEECH.search(src):
         # skill / item descriptions have no subject; the model likes to add "I'll"
         out = LEADING_I.sub("", out)
         if out[:1].islower():
