@@ -48,7 +48,7 @@ details summary{cursor:pointer;font-weight:700;padding:6px 0}
 <main id=""app"">Loading...</main>
 <script>
 var USER_ID={{USER_ID}};
-var RANKS=['','E','D','C','B','A','S','SS','SSS','Z','ZZ','ZZZ','UZ','UZ+'];
+var RANKS=['','E','D','C','B','A','S','SS','SSS','Z','ZZ','ZZZ','UZ','UZ+','UZ++'];
 var TRIBES=['None','Brave','Mysterious','Tough','Charming','Heartful','Shady','Eerie','Slippery','Enma','Wicked'];
 var FOODS=['','Rice balls','Sandwiches','Sweets','Chocobars','Milk','Juice','Burgers','Ramen','Chinese food','Vegetables','Meat','Seafood','Sushi','Curry','Dessert','Oden','Soba','Chips','Ice cream'];
 var IDX=null, CACHE={}, F={q:'',rank:'',tribe:''};

@@ -47,6 +47,11 @@ namespace Puniemu.Src.Server.Admin
                     untranslatedDistinct = TranslationManager.Untranslated.Count
                 },
                 events = new { total = EventManager.Catalog.Count, switchable = EventManager.Catalog.Count(x => x.Selectable) },
+                balance = new
+                {
+                    strength = Puniemu.Src.Server.Balance.BalanceManager.Strength,
+                    factors = Puniemu.Src.Server.Balance.BalanceManager.Factors.OrderBy(k => k.Key).ToDictionary(k => k.Key.ToString(), k => Math.Round(k.Value, 2))
+                },
                 state = ServerStateStore.Current
             });
 

@@ -80,6 +80,7 @@ pre{white-space:pre-wrap;font-size:12px;max-height:520px;overflow:auto;margin:0}
 <div class=""row""><label><input type=""checkbox"" id=""gmix""> Players may mix machines into their Y-Money crank-a-kai</label></div>
 <div class=""row""><label>Server mix (machine ids, used by everyone without their own mix) <input id=""gsmix"" placeholder=""e.g. 9065, 9285"" size=""30""></label><span class=""muted"">Machine ids are on the wiki's Crank-a-kai page.</span></div>
 <div class=""row"" style=""margin-top:10px""><button class=""act"" id=""ssave"">Save settings</button><button class=""ghost"" id=""sflush"">Save all accounts to DB now</button></div></div>
+<div class=""card""><h2>Balance</h2><p class=""muted"" id=""bstat""></p><p class=""muted"">Set <code>BalanceStrength</code> (0 = original, 1 = every rank as strong as the top rank) in appsettings.json and restart; owned Yo-kai are adjusted at the next login.</p></div>
 <div class=""card""><h2>Translation</h2><p class=""muted"" id=""tstat""></p>
 <div class=""row""><button class=""ghost"" id=""tdl"">Download untranslated texts</button><span class=""muted"">Translate them by hand or with Tools/machine_translate.py, put the file in Translations/&lt;language&gt;/ and restart.</span></div></div></section>
 
@@ -106,8 +107,9 @@ function load(t){
   var m=o.metrics,up=Math.floor(m.uptimeSec/3600)+'h '+Math.floor(m.uptimeSec%3600/60)+'m';
   $('tiles').innerHTML=tile('Players online (15 min)',m.activePlayers15m)+tile('Accounts',o.db.accounts)+tile('Devices',o.db.devices)+tile('Cached / unsaved',o.db.cachedAccounts+' / '+o.db.dirtyAccounts)+
    tile('Uptime',up)+tile('Memory',m.memoryMb+' MB')+tile('Game tables',o.tables)+tile('Events (switchable)',o.events.total+' ('+o.events.switchable+')')+
-   tile('Translation',o.translation.language?o.translation.language+': '+o.translation.translated+' texts, '+o.translation.remaining+' left':'off')+tile('Maintenance',o.state.maintenanceMode?'ON':'off');
+   tile('Translation',o.translation.language?o.translation.language+': '+o.translation.translated+' texts, '+o.translation.remaining+' left':'off')+tile('Maintenance',o.state.maintenanceMode?'ON':'off')+tile('Balance',o.balance&&o.balance.strength>0?'strength '+o.balance.strength:'off');
   $('endpoints').innerHTML='<tr><th>Path</th><th>Requests</th><th>Errors</th><th>Avg ms</th></tr>'+m.endpoints.map(function(e){return '<tr><td>'+esc(e.path)+'</td><td>'+e.count+'</td><td>'+e.errors+'</td><td>'+e.avgMs+'</td></tr>';}).join('');
+  if(t==='settings'&&o.balance){var R=['','E','D','C','B','A','S','SS','SSS','Z','ZZ','ZZZ','UZ','UZ+','UZ++'],f=o.balance.factors;$('bstat').textContent=o.balance.strength>0?('BalanceStrength '+o.balance.strength+': '+Object.keys(f).map(function(k){return (R[+k]||k)+' x'+f[k];}).join(', ')):'Balance mode is off (BalanceStrength in appsettings.json, 0-1).';}
   if(t==='settings'){var tr=o.translation;$('tstat').textContent=tr.language?('Language '+tr.language+': '+tr.entries+' dictionary entries, '+tr.translated+' texts translated ('+tr.romaji+' katakana names as romaji), '+tr.remaining+' still Japanese. The export holds '+tr.untranslatedDistinct+' different texts (including the romaji names).'):'Translation is off (set Language in appsettings.json).';}
   if(t==='settings'&&STATE.gacha){var g=STATE.gacha;$('gcs').value=g.coinShop;$('gfree').value=g.freeCoinsPerDay;$('gprice').value=g.coinPriceYMoney;$('gmix').checked=g.allowMix;$('gsmix').value=(g.serverMix||[]).join(', ');}
   if(t==='settings'){$('sy').value=STATE.ymoneyMultiplier;$('sx').value=STATE.expMultiplier;$('si').checked=STATE.infiniteSpirits;$('smotd').value=STATE.motd;$('sm').checked=STATE.maintenanceMode;$('smm').value=STATE.maintenanceMessage;}

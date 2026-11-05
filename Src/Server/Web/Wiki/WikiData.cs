@@ -8,7 +8,7 @@ namespace Puniemu.Src.Server.Web.Wiki
     // translated when a Language is set), so it always matches the server's own game data.
     public class WikiData
     {
-        public static readonly string[] RANKS = { "", "E", "D", "C", "B", "A", "S", "SS", "SSS", "Z", "ZZ", "ZZZ", "UZ", "UZ+" };
+        public static readonly string[] RANKS = { "", "E", "D", "C", "B", "A", "S", "SS", "SSS", "Z", "ZZ", "ZZZ", "UZ", "UZ+", "UZ++" };
         public static readonly string[] TRIBES = { "", "Brave", "Mysterious", "Tough", "Charming", "Heartful", "Shady", "Eerie", "Slippery", "Enma", "Wicked" };
         private static readonly Regex TAGS = new("</?[A-Za-z]+>", RegexOptions.Compiled);
 

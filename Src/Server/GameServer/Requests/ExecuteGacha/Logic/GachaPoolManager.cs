@@ -44,6 +44,10 @@ namespace Puniemu.Src.Server.GameServer.Requests.ExecuteGacha.Logic
                 Gachas = cache.TryGetValue("gacha_pool", out var gachaTxt)
                     ? JsonConvert.DeserializeObject<Dictionary<int, GachaPoolItem>>(gachaTxt) ?? throw new InvalidDataException("Bad gacha_pool.json")
                     : new Dictionary<int, GachaPoolItem>();
+                // entries without weights or Yo-kai (some community files have "{}") would crash a pull;
+                // those machines get a rebuilt pool instead (GachaLineup)
+                foreach (var bad in Gachas.Where(kv => kv.Value?.Weights == null || kv.Value.Weights.Count == 0 || kv.Value.Yokais == null).Select(kv => kv.Key).ToList())
+                    Gachas.Remove(bad);
                 // every other machine of ywp_mst_gacha gets a pool too (see GachaLineup)
                 Puniemu.Src.Server.Gacha.GachaLineup.EnsureBuilt();
                 _isLoaded = true;

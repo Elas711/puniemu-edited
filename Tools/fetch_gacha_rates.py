@@ -79,7 +79,7 @@ def main():
 
     youkai, rank = {}, {}
     for r in table(args.resources, "ywp_mst_youkai"):
-        if len(r) > 3 and r[0].isdigit() and r[3].isdigit() and 0 < int(r[3]) <= 13:
+        if len(r) > 3 and r[0].isdigit() and r[3].isdigit() and 0 < int(r[3]) <= 14:
             k = norm(r[1])
             # several Yo-kai can share a name (forms); keep the newest (highest id)
             if k not in youkai or int(r[0]) > youkai[k]:
