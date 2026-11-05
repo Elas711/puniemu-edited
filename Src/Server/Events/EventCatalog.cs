@@ -101,6 +101,40 @@ namespace Puniemu.Src.Server.Events
 
         [JsonProperty("eventIds")]
         public List<long> EventIds { get; set; } = new();
+
+        // Featured characters (images hosted in the community Drive archive, linked not copied)
+        [JsonProperty("characters", NullValueHandling = NullValueHandling.Ignore)]
+        public List<HistoryCharacter>? Characters { get; set; }
+
+        [JsonProperty("driveFolder", NullValueHandling = NullValueHandling.Ignore)]
+        public string? DriveFolder { get; set; }
+
+        // Fan translation of the event story
+        [JsonProperty("story", NullValueHandling = NullValueHandling.Ignore)]
+        public HistoryLink? Story { get; set; }
+
+        // Free text the server owner can add (tips, notes...)
+        [JsonProperty("notes", NullValueHandling = NullValueHandling.Ignore)]
+        public string? Notes { get; set; }
+    }
+
+    public class HistoryCharacter
+    {
+        [JsonProperty("name")]
+        public string Name { get; set; } = "";
+
+        // Google Drive file id of the picture
+        [JsonProperty("image")]
+        public string Image { get; set; } = "";
+    }
+
+    public class HistoryLink
+    {
+        [JsonProperty("title")]
+        public string Title { get; set; } = "";
+
+        [JsonProperty("url")]
+        public string Url { get; set; } = "";
     }
 
     public class HistorySeries
@@ -120,8 +154,14 @@ namespace Puniemu.Src.Server.Events
         [JsonProperty("_info")]
         public string? Info { get; set; }
 
+        [JsonProperty("source", NullValueHandling = NullValueHandling.Ignore)]
+        public string? Source { get; set; }
+
         [JsonProperty("series")]
         public List<HistorySeries> Series { get; set; } = new();
+
+        [JsonProperty("otherStories", NullValueHandling = NullValueHandling.Ignore)]
+        public List<HistoryLink>? OtherStories { get; set; }
     }
 
     // What a player (or the server) wants to play.

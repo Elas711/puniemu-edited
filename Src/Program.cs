@@ -501,6 +501,12 @@ class Program
         app.MapGet("/web/api/events", PlayerPortal.HandleGetEventsAsync);
         app.MapPost("/web/api/events", PlayerPortal.HandleSetEventsAsync);
 
+        //Event guide: every event of the live game with characters, story, bonuses and missions
+        app.MapGet("/web/guide.nhn", EventGuide.HandlePageAsync);
+        app.MapGet("/web/api/guide", EventGuide.HandleListAsync);
+        app.MapGet("/web/api/guide/event", EventGuide.HandleEventAsync);
+        app.MapPost("/web/api/guide/play", EventGuide.HandlePlayAsync);
+
         //Admin panel
         AdminPanel.Map(app);
 

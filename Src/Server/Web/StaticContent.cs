@@ -176,10 +176,13 @@ namespace Puniemu.Src.Server.Web
         public static string PortalButton(string userId)
         {
             var href = "/web/portal.nhn?userId=" + WebUtility.UrlEncode(userId ?? "");
+            var guide = "/web/guide.nhn?userId=" + WebUtility.UrlEncode(userId ?? "");
             return $@"
-<a href=""{WebUtility.HtmlEncode(href)}"" id=""puniemu-portal-btn"" style=""position:fixed;right:12px;bottom:12px;z-index:99999;
-background:#e8590c;color:#fff;font:bold 15px sans-serif;padding:12px 16px;border-radius:24px;text-decoration:none;
-box-shadow:0 2px 8px rgba(0,0,0,.3)"">&#9733; Events &amp; Server</a>";
+<div style=""position:fixed;right:12px;bottom:12px;z-index:99999;display:flex;flex-direction:column;gap:8px;align-items:flex-end"">
+<a href=""{WebUtility.HtmlEncode(guide)}"" id=""puniemu-guide-btn"" style=""background:#7048e8;color:#fff;font:bold 15px sans-serif;padding:12px 16px;border-radius:24px;text-decoration:none;
+box-shadow:0 2px 8px rgba(0,0,0,.3)"">&#128214; Event Guide</a>
+<a href=""{WebUtility.HtmlEncode(href)}"" id=""puniemu-portal-btn"" style=""background:#e8590c;color:#fff;font:bold 15px sans-serif;padding:12px 16px;border-radius:24px;text-decoration:none;
+box-shadow:0 2px 8px rgba(0,0,0,.3)"">&#9733; Events &amp; Server</a></div>";
         }
     }
 }

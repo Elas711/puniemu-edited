@@ -204,11 +204,29 @@ Set `AdminToken` and open `http://your-server:8080/admin`, enter the token.
 Runtime settings are stored in `server_state.json`. The API behind the panel is under
 `/admin/api/*` (token in the `X-Admin-Token` header).
 
+### In-game Event Guide
+
+In game: **Help → Event Guide** (also linked from the notice page and the Events & Server page).
+A mobile guide to every event of the live game, grouped by series, with search (events, series,
+characters) and a "playable here" filter. Each event page shows:
+
+* its featured Yo-kai and characters (pictures from the community Drive archive, linked not copied;
+  tap to enlarge) and a link to all its pictures,
+* the fan translation of its story, when there is one,
+* for events this server has data for: the original dates, the **bonus Yo-kai** and their effects,
+  the **event missions** and maps (taken from the master data), and a **Play this event** button
+  that switches it on for that player,
+* tips, plus a "How events work" help page.
+
+Link history entries to event ids (admin panel → Events → Event history) to unlock the data parts.
+You can also add your own `"notes"` to any event in `Events/history.json`.
+
 ### In-game pages
 
 * `/help/inquiry/top.nhn` - the game's help page (`help.html` from the data download) with an added
   **Events & Server** button.
 * `/web/portal.nhn` - player portal: news and personal event selection.
+* `/web/guide.nhn` - the Event Guide.
 * `/web/noticeBannerPage.nhn`, `/web/viewpage.nhn?webviewId=...` - notice pages from `Web/Page/`
   (see [Web/README.md](Web/README.md)).
 

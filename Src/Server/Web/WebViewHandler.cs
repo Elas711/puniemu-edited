@@ -84,7 +84,8 @@ h2{{margin:0 0 8px;font-size:16px;color:#e8590c}}</style></head>
 <body><header>{name}</header><main>
 <div class=""card""><h2>News</h2><p>{motd}</p></div>
 <div class=""card""><h2>Events</h2><ul>{eventHtml}</ul>
-<p>Open <b>Help</b> in the game menu and tap <b>Events &amp; Server</b> to choose which events you want to play.</p></div>
+<p>Open <b>Help</b> in the game menu and tap <b>Events &amp; Server</b> to choose which events you want to play,
+or <b>Event Guide</b> to read about every event of the game.</p></div>
 </main></body></html>";
         }
     }
