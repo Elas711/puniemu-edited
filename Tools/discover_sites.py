@@ -60,6 +60,13 @@ QUERIES = [
     "妖怪ウォッチ ぷにぷに", "ぷにぷに 攻略", "punipuni yokai", "wibble wobble yokai", "puniemu",
 ]
 
+# start pages that search APIs don't find (official site, the big Japanese guide sites, news)
+SEEDS = [
+    "https://yokai-punipuni.jp/", "https://www.youkai-watch.jp/", "https://www.level5.co.jp/",
+    "https://gamewith.jp/punipuni/", "https://game8.jp/punipuni", "https://punipuni.gamerch.com/",
+    "https://www.4gamer.net/games/297/G029757/",
+]
+
 # never followed or listed (see "Left out on purpose")
 FILE_HOSTS = {
     "mediafire.com", "mega.nz", "mega.io", "dropbox.com", "dropboxusercontent.com", "drive.google.com",
@@ -696,7 +703,7 @@ def main():
         # pages already known to be relevant first, unconfirmed links (score 0) after them,
         # links left over from the last run in between
         known = sorted((u for u in cat.items if not in_set(host_of(u), NO_CRAWL)), key=lambda u: -cat.items[u]["score"])
-        seeds = a.seed + [u for u in known if cat.items[u]["score"] > 0] + left + [u for u in known if cat.items[u]["score"] == 0]
+        seeds = a.seed + SEEDS + [u for u in known if cat.items[u]["score"] > 0] + left + [u for u in known if cat.items[u]["score"] == 0]
         deadline = time.time() + a.hours * 3600 if a.hours else None
         print(f"[crawl] {len(seeds)} start pages ({len(left)} from the last run), depth {a.depth}, up to {a.max_pages} pages"
               + (f", {a.hours} h" if a.hours else ""), flush=True)
