@@ -35,7 +35,8 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
   `fetch_fandom_names.py`, `fetch_anime_names.py`. See `Translations/README.md`.
 * Crank-a-kai: `Src/Server/Gacha` (pools for every machine, coins, mixes), real odds via
   `Tools/fetch_gacha_rates.py`.
-* Web pages (in-game): wiki `Src/Server/Web/Wiki`, Event Guide, portal; admin `/admin`.
+* Web pages (in-game): wiki `Src/Server/Web/Wiki`, Event Guide, portal, secret words
+  (`Src/Server/Web/SecretWords.cs`, `/web/scword.nhn`); admin `/admin`. Anti-cheat: `Infrastructure/AntiCheat.cs`.
 * Data sources / archives: `docs/ARCHIVES.md` (archive.org items, MediaFire packs,
   `Tools/remote_zip.py`, `Tools/mediafire_download.py --direct <link>`); find new sites with
   `python -I Tools/discover_sites.py --out sites_found` (search APIs + polite crawler, no file hosts).
@@ -43,6 +44,9 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
   `Tools/patch_apk.py` (network config trusts user CAs, re-sign splits).
 
 ## Facts that took long to find
+* Other projects (cloned read-only for ideas): WibWobPS/wwps (Python Puniemu port, docs/porting-notes.md
+  lists upstream quirks), WibWobPS/JibaAC (anti-cheat), WibWobPS/wwpatcher (WibWob hsp_launching_zone).
+  This fork already has all SuperTavor/puniemu commits up to 2026-07-21.
 * Official server `gameserver.yw-p.com` only accepts appVer 4.177.0; assets
   `https://resource.yw-p.com/eal/<ver>/<date>/<file>`; old unlisted assets are deleted (403).
 * `ywp_mst_event` is only sent at login (not in getMaster dumps). Live tables keep ~8 events.

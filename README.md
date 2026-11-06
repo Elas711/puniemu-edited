@@ -263,6 +263,13 @@ Enemies are not changed. Yo-kai players already own are scaled at their next log
 setting is lowered; limit-break bonuses are kept). Changed tables get a new master version, so
 clients download them again. The admin overview lists the rank moves.
 
+### Secret words
+
+Like the official "ひみつのワード" page: create words in admin -> Gifts (empty = a random 16-character
+word; rewards, campaign name, player limit, end date). Players enter their character code and the
+word on `/web/scword.nhn` (also `/scword/`); the rewards arrive in the in-game present box, once per
+player. Wrong words are limited to 20 per hour and address.
+
 ### Crank-a-kai: every machine, coins and mixes
 
 Every crank-a-kai of the master data works (338 on the live 4.177.0 data). Real pools: Japan requires gacha

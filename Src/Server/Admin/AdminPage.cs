@@ -69,7 +69,13 @@ pre{white-space:pre-wrap;font-size:12px;max-height:520px;overflow:auto;margin:0}
 <div class=""row""><input id=""fm"" placeholder=""Message / note"" style=""flex:1""></div>
 <div class=""row""><label>Y-Money <input id=""fy"" type=""number"" value=""0"" style=""width:110px""></label><label>Spirits <input id=""fs"" type=""number"" value=""0"" style=""width:80px""></label>
 <label>Items <input id=""fi"" placeholder=""itemId:count, ..."" size=""26""></label><label>Yo-kai <input id=""fk"" placeholder=""youkaiId, ..."" size=""20""></label><button class=""act"" id=""fsend"">Create gift</button></div></div>
-<div class=""card""><h2>Active gifts</h2><table id=""flist""></table></div></section>
+<div class=""card""><h2>Active gifts</h2><table id=""flist""></table></div>
+<div class=""card""><h2>Secret words</h2><p class=""muted"">Players enter a word with their character code on <a href=""/web/scword.nhn"" target=""_blank"">/web/scword.nhn</a>; the rewards go to their present box, once per player. Leave the word empty for a random 16-character one.</p>
+<div class=""row""><input id=""ww"" placeholder=""Word (empty = random)"" size=""20""><input id=""wc"" placeholder=""Campaign name"" size=""18""><input id=""wm"" placeholder=""Present message"" style=""flex:1""></div>
+<div class=""row""><label>Y-Money <input id=""wy"" type=""number"" value=""0"" style=""width:100px""></label><label>Spirits <input id=""wsp"" type=""number"" value=""0"" style=""width:70px""></label>
+<label>Items <input id=""wi"" placeholder=""itemId:count, ..."" size=""20""></label><label>Yo-kai <input id=""wk"" placeholder=""youkaiId, ..."" size=""16""></label>
+<label>Max players <input id=""wx"" type=""number"" value=""0"" style=""width:80px"" title=""0 = no limit""></label><label>Until <input id=""wu"" type=""date""></label><button class=""act"" id=""wsend"">Create word</button></div>
+<table id=""wlist""></table></div></section>
 
 <section id=""t-settings"" class=""hidden""><div class=""card""><h2>Gameplay</h2>
 <div class=""row""><label>Y-Money multiplier <input id=""sy"" type=""number"" step=""0.1"" min=""0"" style=""width:90px""></label><label>EXP multiplier <input id=""sx"" type=""number"" step=""0.1"" min=""0"" style=""width:90px""></label><label><input type=""checkbox"" id=""si""> Infinite spirits</label></div>
@@ -122,6 +128,7 @@ function load(t){
  if(t==='events')api('GET','/admin/api/events').then(function(e){EV=e;var s=e.settings;document.querySelectorAll('[name=emode]').forEach(function(r){r.checked=r.value===s.mode;});
   $('eplayer').checked=s.allowPlayerChoice;$('ehide').checked=s.hideInactiveEventMaps;$('edays').value=s.eventDurationDays;$('rdays').value=s.rotationDays;$('rcount').value=s.rotationCount;
   loadHistory();$('enow').textContent=e.runningNow?'Running now: '+e.runningNow.join(', '):'Running now: original data';renderEvents();}).catch(fail);
+ if(t==='gifts')loadWords();
  if(t==='logs')api('GET','/admin/api/overview').then(function(o){var a=o.anticheat||{};$('acheat').innerHTML='<p>Mode: <b>'+esc(a.mode)+'</b> &middot; '+(a.recent||[]).length+' recent findings</p>'+((a.recent||[]).length?'<table><tr><th>When (UTC)</th><th>Player</th><th>Rule</th><th>Detail</th></tr>'+a.recent.map(function(f){return '<tr><td>'+esc(String(f.At).replace('T',' ').slice(0,19))+'</td><td title=""'+esc(f.Gdkey)+'"">'+esc(f.Gdkey.slice(0,8))+'</td><td>'+esc(f.Rule)+'</td><td>'+esc(f.Detail)+'</td></tr>';}).join('')+'</table>':'');}).catch(fail);
  if(t==='logs')api('GET','/admin/api/logs').then(function(l){$('logs').textContent=l.slice().reverse().join('\n');}).catch(fail);
  if(t==='logs')api('GET','/admin/api/unimplemented').then(function(u){$('unimpl').innerHTML=u.length?u.map(function(r){return '<details><summary><b>'+esc(r.endpoint)+'</b> &middot; '+r.count+'x'+(r.acknowledged?' <span class=""muted"">(acknowledged)</span>':'')+'</summary>'+
@@ -172,6 +179,10 @@ $('ifile').onchange=function(){var f=this.files[0];if(!f||!confirm('Replace this
  r.onload=function(){var j;try{j=JSON.parse(r.result);}catch(e){toast('Not a JSON file');return;}api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/import',j).then(function(){toast('Save imported');openPlayer(CUR);}).catch(fail);};r.readAsText(f);};
 $('ban').onclick=function(){api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/ban',{reason:$('breason').value}).then(function(){toast('Banned');openPlayer(CUR);}).catch(fail);};
 $('unban').onclick=function(){api('POST','/admin/api/player/'+encodeURIComponent(CUR)+'/unban').then(function(){toast('Unbanned');openPlayer(CUR);}).catch(fail);};
+function loadWords(){api('GET','/admin/api/secretwords').then(function(l){$('wlist').innerHTML='<tr><th>Word</th><th>Campaign</th><th>Rewards</th><th>Used</th><th>Until</th><th></th></tr>'+l.map(function(w){return '<tr><td><code>'+esc(w.word)+'</code></td><td>'+esc(w.campaign)+'</td><td>'+
+ esc([w.ymoney?w.ymoney+' Y-Money':'',w.spirits?w.spirits+' spirits':'',(w.items||[]).map(function(i){return i.id+' x'+i.count;}).join(' '),(w.youkai||[]).join(' ')].filter(Boolean).join(', '))+'</td><td>'+w.uses+(w.maxUses?' / '+w.maxUses:'')+'</td><td>'+esc(w.until||'-')+'</td><td><button class=""act"" data-wdel=""'+esc(w.word)+'"">Delete</button></td></tr>';}).join('');
+ document.querySelectorAll('[data-wdel]').forEach(function(b){b.onclick=function(){api('POST','/admin/api/secretwords/'+encodeURIComponent(b.dataset.wdel)+'/delete').then(loadWords).catch(fail);};});}).catch(fail);}
+$('wsend').onclick=function(){api('POST','/admin/api/secretwords',{word:$('ww').value,campaign:$('wc').value,message:$('wm').value,ymoney:+$('wy').value,spirits:+$('wsp').value,items:parseItems($('wi').value),youkai:parseIds($('wk').value),maxUses:+$('wx').value,until:$('wu').value}).then(function(w){toast('Word created: '+w.word);$('ww').value='';loadWords();}).catch(fail);};
 $('fsend').onclick=function(){api('POST','/admin/api/gifts',{message:$('fm').value,ymoney:+$('fy').value,spirits:+$('fs').value,items:parseItems($('fi').value),youkai:parseIds($('fk').value)}).then(function(){toast('Gift created');load('gifts');}).catch(fail);};
 $('ssave').onclick=function(){api('POST','/admin/api/settings',{gacha:{coinShop:$('gcs').value,freeCoinsPerDay:+$('gfree').value,coinPriceYMoney:+$('gprice').value,allowMix:$('gmix').checked,
  serverMix:$('gsmix').value.split(/[^0-9]+/).filter(function(x){return x;}).map(Number)},ymoneyMultiplier:+$('sy').value,expMultiplier:+$('sx').value,infiniteSpirits:$('si').checked,motd:$('smotd').value,maintenanceMode:$('sm').checked,maintenanceMessage:$('smm').value}).then(function(){toast('Settings saved');}).catch(fail);};

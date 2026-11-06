@@ -518,6 +518,8 @@ class Program
 
         //Player portal: event selector & server info (opened from the in-game Help page)
         app.MapGet("/web/portal.nhn", PlayerPortal.HandlePageAsync);
+        // Secret words (like the official yokai-punipuni.jp/scword/ page)
+        SecretWords.Map(app);
         app.MapGet("/web/api/events", PlayerPortal.HandleGetEventsAsync);
         app.MapPost("/web/api/events", PlayerPortal.HandleSetEventsAsync);
 

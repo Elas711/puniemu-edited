@@ -331,6 +331,21 @@ namespace Puniemu.Src.Server.Admin
                 return new { ok = true };
             });
 
+            Api(app, "GET", "/admin/api/secretwords", async ctx =>
+            {
+                await Task.CompletedTask;
+                return ServerStateStore.Current.SecretWords;
+            });
+
+            Api(app, "POST", "/admin/api/secretwords", async ctx => Puniemu.Src.Server.Web.SecretWords.Create(await ReadJson(ctx)));
+
+            Api(app, "POST", "/admin/api/secretwords/{word}/delete", async ctx =>
+            {
+                Puniemu.Src.Server.Web.SecretWords.Delete((string)ctx.Request.RouteValues["word"]!);
+                await Task.CompletedTask;
+                return new { ok = true };
+            });
+
             Api(app, "POST", "/admin/api/flush", async ctx =>
             {
                 await UDM.FlushNowAsync();

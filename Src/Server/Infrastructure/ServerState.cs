@@ -21,6 +21,46 @@ namespace Puniemu.Src.Server.Infrastructure
         public int Count { get; set; }
     }
 
+    // A secret word ("ひみつのワード", like the official site): a player enters it on the web page with
+    // their character code and the rewards go to their in-game present box, once per player.
+    public class SecretWord
+    {
+        [JsonProperty("word")]
+        public string Word { get; set; } = "";
+
+        [JsonProperty("campaign")]
+        public string Campaign { get; set; } = "";
+
+        [JsonProperty("message")]
+        public string Message { get; set; } = "";
+
+        [JsonProperty("ymoney")]
+        public int YMoney { get; set; }
+
+        [JsonProperty("spirits")]
+        public int Spirits { get; set; }
+
+        [JsonProperty("items")]
+        public List<ItemGrant> Items { get; set; } = new();
+
+        [JsonProperty("youkai")]
+        public List<long> Youkai { get; set; } = new();
+
+        // 0 = any number of players
+        [JsonProperty("maxUses")]
+        public int MaxUses { get; set; }
+
+        [JsonProperty("uses")]
+        public int Uses { get; set; }
+
+        // "yyyy-MM-dd" (server time, inclusive); empty = no end
+        [JsonProperty("until")]
+        public string Until { get; set; } = "";
+
+        [JsonProperty("created")]
+        public string Created { get; set; } = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+    }
+
     // A server-wide gift: every player receives it once, on their next login.
     public class GiftEntry
     {
@@ -134,6 +174,9 @@ namespace Puniemu.Src.Server.Infrastructure
 
         [JsonProperty("gifts")]
         public List<GiftEntry> Gifts { get; set; } = new();
+
+        [JsonProperty("secretWords")]
+        public List<SecretWord> SecretWords { get; set; } = new();
 
         // gdkey -> ban
         [JsonProperty("bans")]
