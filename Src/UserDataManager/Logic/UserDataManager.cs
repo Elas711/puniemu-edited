@@ -96,16 +96,14 @@ create table if not exists public.mail (
             {
                 while (await _flushTimer!.WaitForNextTickAsync(token))
                 {
-                    await FlushAllDirtyAccountsAsync();
+                    // one failed round must not stop saving for the rest of the server's life
+                    try { await FlushAllDirtyAccountsAsync(); }
+                    catch (Exception ex) { Console.WriteLine($"Error in background flush: {ex.Message}"); }
                 }
             }
             catch (OperationCanceledException)
             {
                 Console.WriteLine("bg flush stopped gracefully");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error in background flush loop: {ex.Message}");
             }
         }
 
@@ -234,20 +232,31 @@ create table if not exists public.mail (
         {
             ThrowIfCacheFull();
 
-            var fc = GenerateFriendCode();
-            var acc = new Account()
+            Account acc;
+            for (int attempt = 0; ; attempt++)
             {
-                Gdkey = Guid.NewGuid().ToString(),
-                YwpUserTables = new(),
-                LastLoginTime = "",
-                CharacterId = fc,
-                UserId = System.IO.Hashing.Crc32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(fc)).ToString()
-            };
-            await using var cmd = _dataSource!.CreateCommand(
-                "INSERT INTO account (gdkey, character_id, udkey, user_id, ywp_user_tables, last_lgn_time, start_date, opening_tutorial_flag) " +
-                "VALUES (@gdkey, @character_id, @udkey, @user_id, @ywp_user_tables, @last_lgn_time, @start_date, @opening_tutorial_flag)");
-            AddAccountParameters(cmd, acc);
-            await cmd.ExecuteNonQueryAsync();
+                var fc = GenerateFriendCode();
+                acc = new Account()
+                {
+                    Gdkey = Guid.NewGuid().ToString(),
+                    YwpUserTables = new(),
+                    LastLoginTime = "",
+                    CharacterId = fc,
+                    UserId = System.IO.Hashing.Crc32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(fc)).ToString(),
+                    LastAccessUtc = DateTime.UtcNow
+                };
+                await using var cmd = _dataSource!.CreateCommand(
+                    "INSERT INTO account (gdkey, character_id, udkey, user_id, ywp_user_tables, last_lgn_time, start_date, opening_tutorial_flag) " +
+                    "VALUES (@gdkey, @character_id, @udkey, @user_id, @ywp_user_tables, @last_lgn_time, @start_date, @opening_tutorial_flag)");
+                AddAccountParameters(cmd, acc);
+                try
+                {
+                    await cmd.ExecuteNonQueryAsync();
+                    break;
+                }
+                // friend code / user id are unique and the user id is a 32-bit hash: on a clash draw again
+                catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation && attempt < 8) { }
+            }
 
             // Immediately cache the new account
             _accountCache[acc.Gdkey!] = acc;

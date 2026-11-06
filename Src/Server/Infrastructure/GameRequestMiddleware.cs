@@ -193,14 +193,16 @@ namespace Puniemu.Src.Server.Infrastructure
         {
             var mode = DataManager.Logic.DataManager.AccountOwnershipMode;
             if (mode == "off") return true;
-            if (string.IsNullOrEmpty(udkey)) return true;
+            // "enforce": a request without a device, or from a device the server doesn't know, can't
+            // prove it owns the save (otherwise any made-up deviceId would pass)
+            if (string.IsNullOrEmpty(udkey)) return mode != "enforce";
             var cacheKey = udkey + "|" + gdkey;
             if (_verifiedOwnership.ContainsKey(cacheKey)) return true;
 
             bool owns;
             try
             {
-                if (!await UserDataManager.Logic.UserDataManager.IsDeviceExists(udkey)) return true;
+                // GetDeviceGdkeys is empty for an unknown device
                 var gdkeys = await UserDataManager.Logic.UserDataManager.GetDeviceGdkeysPublicAsync(udkey);
                 owns = gdkeys.Contains(gdkey);
             }

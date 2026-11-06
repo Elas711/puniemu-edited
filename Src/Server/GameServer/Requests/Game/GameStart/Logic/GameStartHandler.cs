@@ -84,6 +84,14 @@ namespace Puniemu.Src.Server.GameServer.Requests.Game.GameStart.Logic
             }
 
             var stageInfoIdx = MasterStageData.StageItems.FindIndex(x => x.StageId == deserialized.StageId);
+            var jsonLevelData = JsonConvert.DeserializeObject<Dictionary<string, StageData>>(DataManager.Logic.DataManager.GameDataManager.GamedataCache["stage_data"]);
+            // Unknown stage: answer before anything (spirit, a pass) is spent
+            if (stageInfoIdx == -1 || jsonLevelData == null || !jsonLevelData.ContainsKey(deserialized.StageId.ToString()))
+            {
+                var err = new MsgBoxResponse("Puniemu dosent have\nconfig data for this stageId : " + deserialized.StageId.ToString(), "Missing stageId");
+                await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(err)));
+                return;
+            }
             //Use pass
             if (MasterStageData.StageItems[stageInfoIdx].UseActionType == 1)
             {
@@ -130,17 +138,6 @@ namespace Puniemu.Src.Server.GameServer.Requests.Game.GameStart.Logic
             var UserDeck = new TableParser.Logic.TableParser<YwpUserYoukaiDeck>(await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(deserialized!.Gdkey!, "ywp_user_youkai_deck"));
             var tutorialList = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<TutorialList>(deserialized!.Gdkey!, "ywp_user_tutorial_list");
 
-            //get current stage info
-            var jsonLevelData = JsonConvert.DeserializeObject<Dictionary<string, StageData>>(DataManager.Logic.DataManager.GameDataManager.GamedataCache["stage_data"]);
-            
-
-            // Throw error if stage dosent have config info
-            if (stageInfoIdx == -1 || (jsonLevelData == null || !(jsonLevelData.ContainsKey(deserialized.StageId.ToString()))))
-            {
-                var err = new MsgBoxResponse("Puniemu dosent have\nconfig data for this stageId : " + deserialized.StageId.ToString(), "Missing stageId");
-                await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(err)));
-                return;
-            }
             StageData LevelData = jsonLevelData[deserialized.StageId.ToString()];
                 
             // Throw error if enemy list is empty
@@ -382,6 +379,8 @@ namespace Puniemu.Src.Server.GameServer.Requests.Game.GameStart.Logic
             var dictionaryTable = new TableParser.Logic.TableParser(dictionary!);
             res.DictionaryDiff = dictionaryTable.ToString();
             await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(deserialized!.Gdkey!, "ywp_user_requestid", res.RequestID);
+            // the battle this session is for: gameEnd must report the same stage
+            await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(deserialized!.Gdkey!, "puniemu_battle_stage", deserialized.StageId);
             res.UserData = userData;
             var resdict = JsonConvert.DeserializeObject<Dictionary<string,object?>>(JsonConvert.SerializeObject(res));
             

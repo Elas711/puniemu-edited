@@ -398,7 +398,10 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEnd.Logic
             if(gameEndType == GameEndType.GameEnd)
                 deserialized.Score += 10000;
             var ReqId = await UDM.GetYwpUserAsync<string>(deserialized!.Gdkey!, "ywp_user_requestid");
-            if ((ReqId == null || deserialized.RequestID == null || ReqId == "" || deserialized.RequestID == "") || (ReqId != deserialized.RequestID))
+            // sessions started before this check existed have no stored stage
+            var battleStage = await UDM.GetYwpUserAsync<long?>(deserialized!.Gdkey!, "puniemu_battle_stage");
+            if ((ReqId == null || deserialized.RequestID == null || ReqId == "" || deserialized.RequestID == "") || (ReqId != deserialized.RequestID)
+                || (battleStage != null && battleStage != deserialized.StageId))
             {
                 var errSession = new MsgBoxResponse("This session is invalid", "INVALID SESSION");
                 await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(errSession)));
