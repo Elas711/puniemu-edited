@@ -70,13 +70,19 @@ NO_CRAWL = {  # logins, bot checks, search engines, huge link farms
     "wikipedia.org", "wikimedia.org", "wikidata.org", "github.com", "gitlab.com", "codeberg.org",
 }
 CATEGORIES = [
-    ("Official", ["yw-p.com", "level5.co.jp", "level5.jp", "youkai-watch.jp", "yo-kai.com", "level5-ia.com"]),
+    ("Official", ["yw-p.com", "level5.co.jp", "level5.jp", "youkai-watch.jp", "yo-kai.com", "level5-ia.com",
+                  "yokai-punipuni", "nhn-playart.com", "kadokawa.co.jp"]),
+    ("App stores", ["apps.apple.com", "play.google.com", "xbox.com", "sensortower.com", "appannie"]),
     ("Wikis", ["fandom.com", "wikia", "miraheze.org", "wiki", "wikiwiki.jp", "seesaawiki.jp", "atwiki.jp"]),
     ("Code", ["github.com", "gitlab.com", "codeberg.org", "bitbucket.org", "sourceforge.net"]),
     ("Archives", ["archive.org"]),
     ("Videos", ["youtube.com", "youtu.be", "nicovideo.jp", "twitch.tv", "bilibili.com"]),
-    ("Communities", ["reddit.com", "discord", "forum", "gamefaqs", "5ch", "2ch", "board", "community", "news.ycombinator.com", "stackexchange", "stackoverflow"]),
-    ("Guides / news", ["game8", "gamewith", "appmedia", "altema", "famitsu", "4gamer", "gamerch", "kamigame", "news", "blog", "note.com", "hatenablog"]),
+    ("Communities", ["reddit.com", "discord", "forum", "gamefaqs", "5ch", "2ch", "board", "community", "news.ycombinator.com",
+                     "stackexchange", "stackoverflow", "resetera.com", "neogaf"]),
+    ("Guides / news", ["game8", "gamewith", "appmedia", "altema", "famitsu", "4gamer", "gamerch", "kamigame", "news", "blog",
+                       "note.com", "hatenablog", "siliconera", "polygon.com", "gamerant", "screenrant", "pocketgamer",
+                       "macworld", "gamezebo", "metacritic", "ign.com", "kotaku", "toucharcade", "nintendolife", "inside-games"]),
+    ("Fan sites / tools", ["github.io", "vercel.app", "netlify.app", "pages.dev", ".dev"]),
 ]
 
 
@@ -253,10 +259,11 @@ def src_github(f, cat):
             text = f"{r['full_name']} {r.get('description') or ''} {' '.join(r.get('topics') or [])}"
             s = relevance(text) or (2 if ("puni" in text.lower() and ("yokai" in text.lower() or "yo-kai" in text.lower())) else 0)
             if s:
+                # a project homepage is only listed if the crawl finds it is about the game
                 cat.add(r["html_url"], f"{r['full_name']} - {r.get('description') or ''}", "github", s + 2,
                         f"{r.get('stargazers_count', 0)} stars, updated {str(r.get('pushed_at', ''))[:10]}")
                 if r.get("homepage"):
-                    cat.add(r["homepage"], r["full_name"] + " (homepage)", "github", s)
+                    cat.add(r["homepage"], r["full_name"] + " (homepage)", "github", 0)
         if not f.github_token:
             time.sleep(6.5)  # 10 searches / minute without a token
 
@@ -340,9 +347,9 @@ SOURCES = [src_archive, src_github, src_gitlab_codeberg, src_wikipedia, src_fand
 
 # ---- crawler --------------------------------------------------------------------------------
 
-def crawl(f, cat, seeds, depth, max_pages):
+def crawl(f, cat, seeds, depth, max_pages, per_host):
     queue = collections.deque((u, 0) for u in seeds)
-    seen, pages = set(), 0
+    seen, pages, per = set(), 0, collections.Counter()
     while queue and pages < max_pages:
         url, d = queue.popleft()
         url = norm_url(url)
@@ -352,6 +359,9 @@ def crawl(f, cat, seeds, depth, max_pages):
         host = host_of(url)
         if in_set(host, FILE_HOSTS) or in_set(host, NO_CRAWL) or re.search(r"\.(zip|rar|7z|apk|xapk|apks|ipa|exe|pdf|png|jpe?g|gif|webp|mp4|mp3)$", url, re.I):
             continue
+        if per[host] >= per_host:  # spread the budget over many sites
+            continue
+        per[host] += 1
         r = f.get(url, quiet=True)
         pages += 1
         if not r or "html" not in r[1].lower():
@@ -361,13 +371,15 @@ def crawl(f, cat, seeds, depth, max_pages):
             p.feed(r[0])
         except Exception:  # noqa: BLE001
             continue
-        text = f"{p.title} {p.desc} {' '.join(p.text)}"
-        score = relevance(text)
+        # about the game: named in the title / description, or several times in the text
+        # (a single mention in a sidebar or "related articles" box is not enough)
+        head, body = relevance(f"{p.title} {p.desc}"), relevance(" ".join(p.text))
+        score = head + body if head else (body if body >= 8 else 0)
         if score:
             cat.add(r[2], p.title, "crawl", min(10, score), p.desc)
             if d < depth:
-                # same-site pages first (guides have many sub pages), then other sites
-                for link in sorted(set(p.links), key=lambda x: host_of(x) != host)[:200]:
+                # other sites first (new sites are the point), then a few pages of this one
+                for link in sorted(set(p.links), key=lambda x: host_of(x) == host)[:200]:
                     queue.append((link, d + 1))
         if pages % 25 == 0:
             print(f"  crawled {pages} pages, {len(cat.items)} sites known, {len(queue)} queued", flush=True)
@@ -377,11 +389,10 @@ def crawl(f, cat, seeds, depth, max_pages):
 # ---- report ---------------------------------------------------------------------------------
 
 def category(url):
-    host, path = host_of(url), urllib.parse.urlsplit(url).path.lower()
-    for part in (host, path):  # the site decides first, then the page path
-        for name, keys in CATEGORIES:
-            if any(k in part for k in keys):
-                return name
+    host = host_of(url)  # by site, so one site is never split over two sections
+    for name, keys in CATEGORIES:
+        if any(k in host for k in keys):
+            return name
     return "Other sites"
 
 
@@ -416,6 +427,7 @@ def main():
     ap.add_argument("--seed", action="append", default=[], help="extra start page for the crawler (repeatable)")
     ap.add_argument("--depth", type=int, default=2, help="link depth from relevant pages (default 2)")
     ap.add_argument("--max-pages", type=int, default=600, help="crawler page budget (default 600)")
+    ap.add_argument("--per-host", type=int, default=12, help="pages per site and run (default 12)")
     ap.add_argument("--delay", type=float, default=1.5, help="seconds between requests to one host")
     ap.add_argument("--only", help="comma list of sources: archive,github,gitlab,wikipedia,fandom,hn")
     a = ap.parse_args()
@@ -438,9 +450,10 @@ def main():
         cat.save()
 
     if not a.no_crawl:
-        seeds = a.seed + [u for u in cat.items if not in_set(host_of(u), NO_CRAWL)]
+        # pages already known to be relevant first, unconfirmed links (score 0) after them
+        seeds = a.seed + sorted((u for u in cat.items if not in_set(host_of(u), NO_CRAWL)), key=lambda u: -cat.items[u]["score"])
         print(f"[crawl] {len(seeds)} start pages, depth {a.depth}, up to {a.max_pages} pages", flush=True)
-        crawl(f, cat, seeds, a.depth, a.max_pages)
+        crawl(f, cat, seeds, a.depth, a.max_pages, a.per_host)
 
     # links that were only candidates (score 0) and never turned out to be about the game
     cat.items = {u: it for u, it in cat.items.items() if it["score"] > 0}
