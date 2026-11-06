@@ -38,6 +38,109 @@ namespace Puniemu.Src.Server.Balance
         private static int _top;
         private static readonly Dictionary<long, (int rank, int eraTop)> _info = new();
 
+        // ---- skills: attack power grows with the rank too (median max power: S 100, Z 123, UZ 220,
+        // UZ++ 317), so a re-ranked Yo-kai's attack skill gets the power of its new rank.
+        private const string SKILL_LEVEL = "ywp_mst_youkai_skill_level";
+        private const int SK_ID = 0, SK_LEVEL = 1, SK_TEXT = 2, SK_VALUE = 4, SK_SCALE = 11;
+        private static readonly string[] POWER_LABELS = { "いりょく", "玉のいりょく", "目安のいりょく" };
+        private static readonly HashSet<string> _powerRows = new();      // "skillId|level" of attack skills
+        private static readonly Dictionary<int, int> _skillPower = new(); // rank -> typical max power
+        public static Dictionary<string, int> SkillsScaled { get; private set; } = new();
+
+        // Called before the translation overlay: finds the attack skills by their Japanese label.
+        public static void Prepare()
+        {
+            var cache = DataManager.Logic.DataManager.GameDataManager.GamedataCache;
+            if (!cache.TryGetValue(SKILL_LEVEL, out var raw) || !cache.TryGetValue(TABLE, out var yraw)) return;
+            var rank = new Dictionary<string, int>();
+            foreach (var r in EventManager.ReadPipeRows(yraw, out _))
+                if (r.Length > RANK && int.TryParse(r[RANK], out var k) && k > 0) rank.TryAdd(r[0], k);
+            var maxBySkill = new Dictionary<string, (int level, int power)>();
+            _powerRows.Clear();
+            foreach (var r in EventManager.ReadPipeRows(raw, out _))
+            {
+                if (r.Length <= SK_SCALE) continue;
+                var t = r[SK_TEXT];
+                var label = t.Split(':', '：')[0].Trim();
+                if (!POWER_LABELS.Contains(label)) continue;
+                _powerRows.Add(r[SK_ID] + "|" + r[SK_LEVEL]);
+                var m = System.Text.RegularExpressions.Regex.Match(t, @"\d+");
+                if (m.Success && int.TryParse(r[SK_LEVEL], out var lv) && (!maxBySkill.TryGetValue(r[SK_ID], out var cur) || lv > cur.level))
+                    maxBySkill[r[SK_ID]] = (lv, int.Parse(m.Value));
+            }
+            _skillPower.Clear();
+            int run = 0;
+            foreach (var g in maxBySkill.Where(kv => rank.ContainsKey(kv.Key)).GroupBy(kv => rank[kv.Key]).OrderBy(g => g.Key))
+            {
+                var v = g.Select(kv => kv.Value.power).OrderBy(x => x).ElementAt(g.Count() / 2);
+                run = Math.Max(run, v); // few low-rank samples: keep the curve rising
+                _skillPower[g.Key] = run;
+            }
+        }
+
+        private static double Power(int rank)
+        {
+            if (_skillPower.TryGetValue(rank, out var p)) return p;
+            var lower = _skillPower.Where(kv => kv.Key <= rank).OrderByDescending(kv => kv.Key).Select(kv => kv.Value).FirstOrDefault();
+            return lower;
+        }
+
+        // skill power multiplier of one Yo-kai
+        public static double SkillFactorFor(long youkaiId, string mode, double strength)
+        {
+            if (!_info.TryGetValue(youkaiId, out var i) || Power(i.rank) <= 0) return 1.0;
+            strength = Math.Clamp(strength, 0, 1);
+            if (mode == "rerank")
+            {
+                var target = Power(NewRank(i.rank, i.eraTop, mode, strength));
+                return target > 0 ? Math.Max(1.0, target / Power(i.rank)) : 1.0;
+            }
+            if (mode == "stats")
+            {
+                var top = _skillPower.Count > 0 ? _skillPower.Values.Max() : 0;
+                return top > 0 ? (Power(i.rank) + strength * (top - Power(i.rank))) / Power(i.rank) : 1.0;
+            }
+            return 1.0;
+        }
+
+        private static void ScaleSkills(ConcurrentDictionary<string, string> cache)
+        {
+            if (_powerRows.Count == 0 || !cache.TryGetValue(SKILL_LEVEL, out var raw)) return;
+            var rows = EventManager.ReadPipeRows(raw, out var wrap);
+            var number = new System.Text.RegularExpressions.Regex(@"\d+");
+            var scaled = new HashSet<string>();
+            var byRank = new Dictionary<string, int>();
+            foreach (var r in rows)
+            {
+                if (r.Length <= SK_SCALE || !_powerRows.Contains(r[SK_ID] + "|" + r[SK_LEVEL]) || !long.TryParse(r[SK_ID], out var id)) continue;
+                var f = SkillFactorFor(id, Mode, Strength);
+                if (Math.Abs(f - 1) < 0.0001) continue;
+                // shown power (first number, whatever the language) and the scale values the battle uses
+                r[SK_TEXT] = number.Replace(r[SK_TEXT], m => ((int)Math.Round(int.Parse(m.Value) * f)).ToString(), 1);
+                // skills without a scale list keep their power in column 4 (x10 of the shown points)
+                if (!r[SK_SCALE].Contains("scale") && int.TryParse(r[SK_VALUE], out var val) && val > 0)
+                    r[SK_VALUE] = ((int)Math.Round(val * f)).ToString();
+                r[SK_SCALE] = string.Join(",", r[SK_SCALE].Split(',').Select(kv =>
+                {
+                    var p = kv.Split(':');
+                    return p.Length == 2 && p[0].StartsWith("scale") && p[0] != "scale0" && int.TryParse(p[1], out var v)
+                        ? p[0] + ":" + (int)Math.Round(v * f) : kv;
+                }));
+                if (scaled.Add(r[SK_ID]))
+                {
+                    var key = "x" + Math.Round(f, 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    byRank[key] = byRank.GetValueOrDefault(key) + 1;
+                }
+            }
+            if (scaled.Count == 0) return;
+            SkillsScaled = byRank.OrderByDescending(kv => kv.Value).ToDictionary(kv => kv.Key, kv => kv.Value);
+            var text = string.Join("*", rows.Select(x => string.Join("|", x)));
+            if (wrap != null) { wrap["tableData"] = text; cache[SKILL_LEVEL] = wrap.ToString(Newtonsoft.Json.Formatting.None); }
+            else cache[SKILL_LEVEL] = text;
+            MasterVersions.MarkChanged(cache, SKILL_LEVEL);
+            Log.Info("balance", $"{scaled.Count} attack skills scaled with the new ranks");
+        }
+
         public static int RankOf(long youkaiId) => _info.TryGetValue(youkaiId, out var i) ? i.rank : 0;
 
         public static int NewRank(int rank, int eraTop, string mode, double strength)
@@ -126,6 +229,7 @@ namespace Puniemu.Src.Server.Balance
             if (wrap != null) { wrap["tableData"] = text; cache[TABLE] = wrap.ToString(Newtonsoft.Json.Formatting.None); }
             else cache[TABLE] = text;
             MasterVersions.MarkChanged(cache, TABLE);
+            ScaleSkills(cache);
             Log.Info("balance", $"BalanceMode {Mode}, strength {Strength:0.##}: {changed} Yo-kai changed" +
                 (Mode == "rerank" ? "; rank moves: " + string.Join(", ", RankMoves.Take(12).Select(kv => $"{kv.Key} x{kv.Value}")) : ""));
         }

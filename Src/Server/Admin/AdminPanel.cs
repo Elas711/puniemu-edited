@@ -52,6 +52,7 @@ namespace Puniemu.Src.Server.Admin
                     mode = Puniemu.Src.Server.Balance.BalanceManager.Mode,
                     strength = Puniemu.Src.Server.Balance.BalanceManager.Strength,
                     rankMoves = Puniemu.Src.Server.Balance.BalanceManager.RankMoves,
+                    skillsScaled = Puniemu.Src.Server.Balance.BalanceManager.SkillsScaled,
                     factors = Puniemu.Src.Server.Balance.BalanceManager.Factors.OrderBy(k => k.Key).ToDictionary(k => k.Key.ToString(), k => Math.Round(k.Value, 2))
                 },
                 state = ServerStateStore.Current

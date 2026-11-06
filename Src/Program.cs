@@ -101,6 +101,7 @@ class Program
         //Runtime state (events, bans, rates, maintenance) edited from the admin panel
         ServerStateStore.Load(DataManager.Logic.DataManager.ResolvePath(DataManager.Logic.DataManager.ServerStatePath));
         //Optional English (or other) overlay for the game's master data
+        Puniemu.Src.Server.Balance.BalanceManager.Prepare(); // reads skill labels before they are translated
         TranslationManager.Initialize();
         Puniemu.Src.Server.Balance.BalanceManager.Initialize(
             // BalanceStrength alone (older configs) means the "stats" mode

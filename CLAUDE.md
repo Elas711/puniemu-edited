@@ -59,11 +59,12 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
 
 ## Done recently
 * Balance (`Src/Server/Balance`): BalanceMode rerank/stats/off + BalanceStrength 0-1; rerank maps
-  rank by release-year top rank onto E..UZ++ (stat total per rank is fixed), owned Yo-kai synced at login,
+  rank by release-year top rank onto E..UZ++ (stat total per rank is fixed), attack skills scaled
+  (skill_level col 2 text, col 4 or col 11 scaleN; Prepare() reads JP labels before translation), owned Yo-kai synced at login,
   MasterVersions raises mstVersionMaster once per content change (master_version.json).
 
 ## Open work (keep this list current; take the top item)
-0. Balance: skill power by new rank (ywp_mst_youkai_skill_level / skill tables), show new rank in wiki.
+0. Balance: strong skills (ywp_mst_youkai_strong_skill_level) and non-attack skills are not scaled yet.
 1. Endpoints whose layout is in `docs/PROTOCOL.md` but not implemented: `updateEventTutorialFlg`
    (store `ywp_user_event_tutorial`), `recvEventReward(All)`, `getEventRanking`, `gameStartEvent` /
    `gameEndEvent` / `gameContinueEvent`, `gameContinueScoreAttack`, `resultScoreAttack`,

@@ -252,9 +252,11 @@ then, but sits far below a Z today. `"BalanceMode"` chooses what to do, `"Balanc
 * `"rerank"` (recommended) - every Yo-kai gets a **new rank** that fits today's scale, from its old
   rank and the top rank of its release year (undated pre-2019 Yo-kai: SSS was the top). The rank is
   mapped onto E..UZ++ (`1` = an era's best become UZ++, `0.5` = halfway; E stays E, a D stays low),
-  and its stats become the standard total of the new rank (HP/ATK ratio kept). Examples at `1`:
+  and its stats become the standard total of the new rank (HP/ATK ratio kept). Attack skills get
+  the typical power of the new rank too (median max power: S 100pt, Z 123, UZ 220, UZ++ 317). Examples at `1`:
   2016 S -> ZZ, 2016 A -> SSS, B -> SS, D -> C, 2019 Z -> UZ++.
-* `"stats"` - ranks stay, every rank's stats move toward the top rank (`0.5`: D x4.3, S x2.2, Z x1.5).
+* `"stats"` - ranks stay, every rank's stats and attack-skill power move toward the top rank's
+  (`0.5`: stats D x4.3, S x2.2, Z x1.5).
 * `"off"` (default; also used when `BalanceStrength` is 0).
 
 Enemies are not changed. Yo-kai players already own are scaled at their next login (and back if the
