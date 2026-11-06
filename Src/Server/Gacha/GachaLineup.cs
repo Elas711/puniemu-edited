@@ -93,7 +93,9 @@ namespace Puniemu.Src.Server.Gacha
             foreach (var r in Rows("ywp_mst_youkai"))
             {
                 if (r.Length < 4 || !long.TryParse(r[0], out var id) || !int.TryParse(r[3], out var rk) || rk <= 0 || rk > 14) continue;
-                rank[id] = rk;
+                // odds tiers follow the original ranks (BalanceMode=rerank changes column 3)
+                var orig = Puniemu.Src.Server.Balance.BalanceManager.RankOf(id);
+                rank[id] = orig > 0 ? orig : rk;
                 var d = r.FirstOrDefault(c => DATE.IsMatch(c));
                 if (d != null && DateTime.TryParseExact(d, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.None, out var when))
                     released.Add((when, id));
