@@ -246,10 +246,20 @@ Pictures come from the data download (`bl_<id>.png` and similar), so they appear
 
 In the master data every Yo-kai of a rank has exactly the same total stats (all Z: 1933 max HP + ATK,
 all UZ: 2900, all UZ+: 3330); the power creep comes from the new ranks (ZZ 2020, ZZZ 2021, UZ 2023,
-UZ+ 2025). `"BalanceStrength"` moves every rank toward the top rank: `0` = original, `0.5` closes
-half of the gap (rank D x4.3, S x2.2, Z x1.5, UZ x1.16), `1` gives every Yo-kai top-rank stats. HP and
-attack keep their ratio, enemies are not changed, Yo-kai players already own are scaled at
-their next login (and scaled back if the setting is lowered; limit-break bonuses are kept). Changed tables get a new master version, so clients download them again.
+UZ+ 2025, UZ++ 2026). Old Yo-kai were given the ranks of their time: an S of 2016 was among the best
+then, but sits far below a Z today. `"BalanceMode"` chooses what to do, `"BalanceStrength"` (0-1) how much:
+
+* `"rerank"` (recommended) - every Yo-kai gets a **new rank** that fits today's scale, from its old
+  rank and the top rank of its release year (undated pre-2019 Yo-kai: SSS was the top). The rank is
+  mapped onto E..UZ++ (`1` = an era's best become UZ++, `0.5` = halfway; E stays E, a D stays low),
+  and its stats become the standard total of the new rank (HP/ATK ratio kept). Examples at `1`:
+  2016 S -> ZZ, 2016 A -> SSS, B -> SS, D -> C, 2019 Z -> UZ++.
+* `"stats"` - ranks stay, every rank's stats move toward the top rank (`0.5`: D x4.3, S x2.2, Z x1.5).
+* `"off"` (default; also used when `BalanceStrength` is 0).
+
+Enemies are not changed. Yo-kai players already own are scaled at their next login (and back if the
+setting is lowered; limit-break bonuses are kept). Changed tables get a new master version, so
+clients download them again. The admin overview lists the rank moves.
 
 ### Crank-a-kai: every machine, coins and mixes
 
@@ -375,7 +385,8 @@ All keys are optional except `PostgresConnectionString` and `IsWibWob`.
 | `AdminToken` | `""` | enables the admin panel |
 | `Language` | `""` | `en` = translate the game data with `Translations/en` |
 | `RomajiFallback` | `true` | write untranslated katakana names in romaji |
-| `BalanceStrength` | `0` | 0-1: raise lower ranks' stats toward the top rank |
+| `BalanceMode` | `off` | `rerank` (new ranks for old Yo-kai), `stats` or `off` |
+| `BalanceStrength` | `0` | 0-1: how strongly old Yo-kai are raised |
 | `TranslationsPath` / `EventsPath` / `WebPath` / `AssetOverlayPath` | `Translations` / `Events` / `Web` / `AssetOverlay` | folders |
 | `ServerStatePath` | `server_state.json` | runtime settings file |
 | `AccountOwnershipMode` | `log` | `off`, `log` or `enforce` |

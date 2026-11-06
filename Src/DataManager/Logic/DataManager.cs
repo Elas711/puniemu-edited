@@ -78,6 +78,8 @@ namespace Puniemu.Src.DataManager.Logic
         public static string ServerStatePath { get; private set; } = "server_state.json";
         // 0 = original Yo-kai stats, 1 = every rank as strong as the top rank (see BalanceManager)
         public static double BalanceStrength { get; private set; }
+        // "off", "rerank" (new rank by release era + its stats) or "stats" (stats toward the top rank)
+        public static string BalanceMode { get; private set; } = "off";
 
         // off | log | enforce: check that the device sending a request owns the save it names.
         public static string AccountOwnershipMode { get; private set; } = "log";
@@ -128,6 +130,7 @@ namespace Puniemu.Src.DataManager.Logic
             Language = (config["Language"] ?? "").Trim().ToLowerInvariant();
             TranslationsPath = GetString(config, "TranslationsPath", TranslationsPath);
             Puniemu.Src.Server.Translation.TranslationManager.RomajiFallback = GetBool(config, "RomajiFallback", true);
+            BalanceMode = GetString(config, "BalanceMode", "").Trim().ToLowerInvariant();
             BalanceStrength = double.TryParse(config["BalanceStrength"], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var bs) ? bs : 0;
             EventsPath = GetString(config, "EventsPath", EventsPath);
             WebPath = GetString(config, "WebPath", WebPath);

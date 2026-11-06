@@ -102,7 +102,11 @@ class Program
         ServerStateStore.Load(DataManager.Logic.DataManager.ResolvePath(DataManager.Logic.DataManager.ServerStatePath));
         //Optional English (or other) overlay for the game's master data
         TranslationManager.Initialize();
-        Puniemu.Src.Server.Balance.BalanceManager.Initialize(DataManager.Logic.DataManager.BalanceStrength);
+        Puniemu.Src.Server.Balance.BalanceManager.Initialize(
+            // BalanceStrength alone (older configs) means the "stats" mode
+            DataManager.Logic.DataManager.BalanceMode.Length > 0 ? DataManager.Logic.DataManager.BalanceMode
+                : DataManager.Logic.DataManager.BalanceStrength > 0 ? "stats" : "off",
+            DataManager.Logic.DataManager.BalanceStrength);
         //Replacement asset files (e.g. translated images) served instead of the data download ones
         AssetOverlay.Initialize();
         //Build the event catalog from the loaded master data and Events/*.json packs
