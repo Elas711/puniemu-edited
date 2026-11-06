@@ -190,7 +190,6 @@ namespace Puniemu.Src.Server.GameServer.Logic
                 if (mstEntry == null) continue;
                 if(mstEntry.MissionType == missionType && mission.IsAppear == 1 && mission.MissionCompleteStatus != MissionCompleteStatus.CompleteRewardAcquired)
                 {
-                    Console.WriteLine($"[*] Checking mission for user ${gdkey}: \"{missionCfgItem.MissionName}\".");
                     if(BasicProgress.Contains(missionType))
                     {
                         BasicProgressCheck(mission, progressToUpdate);

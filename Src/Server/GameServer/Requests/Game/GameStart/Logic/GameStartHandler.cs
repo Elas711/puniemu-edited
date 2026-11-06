@@ -72,7 +72,6 @@ namespace Puniemu.Src.Server.GameServer.Requests.Game.GameStart.Logic
             ctx.Request.BodyReader.AdvanceTo(readResult.Buffer.End);
             var requestJsonString = NHNCrypt.Logic.NHNCrypt.DecryptRequest(encRequest);
             var deserialized = JsonConvert.DeserializeObject<GameStartRequest>(requestJsonString!);
-            Console.WriteLine(deserialized.StageId);
             // send bad requests if bad requests send
             var userData = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<YwpUserData>(deserialized!.Gdkey!, "ywp_user_data");
             var UserStage = new TableParser.Logic.TableParser<YwpUserStage>((await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(deserialized!.Gdkey!, "ywp_user_stage"))!);
@@ -341,7 +340,6 @@ namespace Puniemu.Src.Server.GameServer.Requests.Game.GameStart.Logic
                 };
                 if (multiplier > 0)
                 {
-                    Console.WriteLine("Applied tribe unity bonus for tribe " + mstItem.YoukaiKind + ": " + multiplier + "%.");
                     yokai.Hp += yokai.Hp * multiplier / 100;
                     yokai.AttackPower += yokai.AttackPower * multiplier / 100;
                 }

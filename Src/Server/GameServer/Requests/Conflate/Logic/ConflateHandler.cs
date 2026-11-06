@@ -33,14 +33,24 @@ namespace Puniemu.Src.Server.GameServer.Requests.Conflate.Logic
             var mstConflateItem = _mstConflate.Items.FirstOrDefault(x => x.ConflateID == deserialized.ConflateID);
             if (mstConflateItem == null)
             {
-                await ctx.Response.WriteAsync(JsonConvert.SerializeObject(new MsgBoxResponse("Invalid conflate", "Err")));
+                await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(new MsgBoxResponse("Invalid conflate", "Err"))));
                 return;
             }
             //Do checks
             if (res.YwpUserData.YMoney < mstConflateItem.YMoneyCost)
             {
-                await ctx.Response.WriteAsync(JsonConvert.SerializeObject(new MsgBoxResponse("Not enough Y-Money", "Err")));
+                await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(new MsgBoxResponse("Not enough Y-Money", "Err"))));
                 return;
+            }
+            // a Yo-kai used up by the fusion must not stay in a team
+            var userDeck = new TableParser<YwpUserYoukaiDeck>(await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<string>(deserialized.Level5UserID, "ywp_user_youkai_deck"));
+            foreach (var (type, id) in new[] { (mstConflateItem.FuseObject1Type, mstConflateItem.FuseObject1ID), (mstConflateItem.FuseObject2Type, mstConflateItem.FuseObject2ID) })
+            {
+                if (type == RewardType.Yokai && userDeck.Items.Any(d => d.MiddleYoukaiId == id || d.MiddleLeftYoukaiId == id || d.MiddleRightYoukaiId == id || d.FarLeftYoukaiId == id || d.FarRightYoukaiId == id))
+                {
+                    await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(new MsgBoxResponse("Take this Yo-kai out of your team first.", "Fusion"))));
+                    return;
+                }
             }
             //delete yokai/item that is fused with
             try

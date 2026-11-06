@@ -43,6 +43,12 @@ namespace Puniemu.Src.Server.GameServer.Requests.EvolveYoukai.Logic
                 return;
             }
 
+            if (mstItem.EvolutionYoukaiId <= 0 || !mstYokai.Items.Any(x => x.YoukaiId == mstItem.EvolutionYoukaiId))
+            {
+                var errRes = new MsgBoxResponse("This Yo-kai doesn't evolve.", "Error");
+                await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(errRes)));
+                return;
+            }
             var canEvolve = userYokaiItem.Level >= mstItem.EvolutionLevel;
             if(!canEvolve)
             {
@@ -82,12 +88,15 @@ namespace Puniemu.Src.Server.GameServer.Requests.EvolveYoukai.Logic
             evolvedYokaiUserItem.Hp = evoMst.BaseHp + hpOff * (oldLevel - 1);
             evolvedYokaiUserItem.Atk = evoMst.BaseAtk + atkOff * (oldLevel - 1);
 
-            var deck = userDeck.Items[0];
-            if (deck.MiddleYoukaiId == deserialized.YokaiID) deck.MiddleYoukaiId = mstItem.EvolutionYoukaiId;
-            if (deck.MiddleLeftYoukaiId == deserialized.YokaiID) deck.MiddleLeftYoukaiId = mstItem.EvolutionYoukaiId;
-            if (deck.MiddleRightYoukaiId == deserialized.YokaiID) deck.MiddleRightYoukaiId = mstItem.EvolutionYoukaiId;
-            if (deck.FarRightYoukaiId == deserialized.YokaiID) deck.FarRightYoukaiId = mstItem.EvolutionYoukaiId;
-            if (deck.FarLeftYoukaiId == deserialized.YokaiID) deck.FarLeftYoukaiId = mstItem.EvolutionYoukaiId;
+            // every team the Yo-kai is in (not only the first one) gets the evolved form
+            foreach (var deck in userDeck.Items)
+            {
+                if (deck.MiddleYoukaiId == deserialized.YokaiID) deck.MiddleYoukaiId = mstItem.EvolutionYoukaiId;
+                if (deck.MiddleLeftYoukaiId == deserialized.YokaiID) deck.MiddleLeftYoukaiId = mstItem.EvolutionYoukaiId;
+                if (deck.MiddleRightYoukaiId == deserialized.YokaiID) deck.MiddleRightYoukaiId = mstItem.EvolutionYoukaiId;
+                if (deck.FarRightYoukaiId == deserialized.YokaiID) deck.FarRightYoukaiId = mstItem.EvolutionYoukaiId;
+                if (deck.FarLeftYoukaiId == deserialized.YokaiID) deck.FarLeftYoukaiId = mstItem.EvolutionYoukaiId;
+            }
 
             var popup = new YokaiWonPopup(mstItem.EvolutionYoukaiId, userYokai, userSkill);
             var res = new EvolveYoukaiResponse();

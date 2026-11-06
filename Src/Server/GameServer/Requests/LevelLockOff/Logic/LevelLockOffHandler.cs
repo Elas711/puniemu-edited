@@ -42,7 +42,6 @@ namespace Puniemu.Src.Server.GameServer.Requests.LevelLockOff.Logic
                 return;
             }
 
-            Console.WriteLine($"[LevelLockOff] Calculated price: {price}");
             userData.YMoney -= price;
 
             //Unlock yokai

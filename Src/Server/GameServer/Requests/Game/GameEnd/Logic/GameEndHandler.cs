@@ -98,7 +98,6 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEnd.Logic
                 long param1 = MasterStageData.ConditionItems[tempIndex].ConditionVal1;
                 var stage = ywpUserStage.Items[StageManager.GetStageIndex(ywpUserStage, deserialized.StageId)];
                 bool good = ConditionManager.ComputeStageCondition(MasterStageData.ConditionItems[tempIndex].ConditionType, deserialized, stage, MasterStageData.ConditionItems[tempIndex].ConditionVal1, MasterStageData.ConditionItems[tempIndex].ConditionVal2, MasterStageData.ConditionItems[tempIndex].ConditionVal3);
-                Console.WriteLine(tempConditionId.ToString() + " | " + good.ToString() + " | " + MasterStageData.ConditionItems[tempIndex].ConditionType.ToString());
 
                 // 1-3 are generally the condition for stars, 4+ are generally locked levels condition
                 if (conditionCount == 1)
@@ -118,7 +117,6 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEnd.Logic
                     // will store the unlocked stageId
                     long newAddedStage = -1;
                     bool isFinalStageMap = MasterStageData.GetNextStage(deserialized.StageId) == -1;
-                    Console.WriteLine(MasterStageData.GetNextStage(deserialized.StageId).ToString());
                     var MapIndex = MstMapManager.GetMapIndex(ywpMstMap, (int)Math.Floor(deserialized.StageId / 1000.0));
                     if (isFinalStageMap && ywpMstMap[MapIndex].ReverseMapId != 0)
                     {
