@@ -403,6 +403,7 @@ All keys are optional except `PostgresConnectionString` and `IsWibWob`.
 | `TranslationsPath` / `EventsPath` / `WebPath` / `AssetOverlayPath` | `Translations` / `Events` / `Web` / `AssetOverlay` | folders |
 | `ServerStatePath` | `server_state.json` | runtime settings file |
 | `AccountOwnershipMode` | `log` | `off`, `log` or `enforce` |
+| `OperationRateLimit` | `true` | per-save limits for crank-a-kai, battle end, presents, missions, login |
 | `AntiCheatMode` | `log` | battle result checks: `off`, `log` (admin -> Logs) or `enforce` (reject) |
 | `AntiCheatMinBattleSeconds` | `8` | a stage cleared faster than this is flagged |
 | `AntiCheatMaxScorePerSecond` | `5000000` | score cap: 1,000,000 + this x battle seconds |

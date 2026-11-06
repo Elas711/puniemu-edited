@@ -70,3 +70,52 @@ namespace Puniemu.Src.Server.Infrastructure
         }
     }
 }
+
+namespace Puniemu.Src.Server.Infrastructure
+{
+    // Per-save token buckets for the calls bots farm (idea from WibWobPS/JibaAC). Far above what a
+    // person can do in the game (a crank-a-kai or a battle takes seconds); "OperationRateLimit": false
+    // turns it off.
+    public static class OperationLimiter
+    {
+        private record Bucket(double Capacity, double PerSecond);
+
+        private static readonly Dictionary<string, Bucket> LIMITS = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["executeGacha"] = new(10, 0.5),
+            ["gameEnd"] = new(10, 0.5),
+            ["gameEndScoreAttack"] = new(10, 0.5),
+            ["receivePresentBox"] = new(12, 1),
+            ["missionReward"] = new(30, 2),
+            ["missionRewardAll"] = new(10, 0.5),
+            ["login"] = new(10, 0.2),
+            ["createUser"] = new(5, 0.05),
+        };
+
+        private class State { public double Tokens; public DateTime At; }
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, State> _state = new();
+
+        public static bool Allow(string gdkey, string path)
+        {
+            if (!DataManager.Logic.DataManager.OperationRateLimit) return true;
+            var name = path.Trim('/');
+            var dot = name.IndexOf(".nhn", StringComparison.OrdinalIgnoreCase);
+            if (dot >= 0) name = name[..dot];
+            if (!LIMITS.TryGetValue(name, out var b)) return true;
+            var s = _state.GetOrAdd(gdkey + "|" + name, _ => new State { Tokens = b.Capacity, At = DateTime.UtcNow });
+            lock (s)
+            {
+                var now = DateTime.UtcNow;
+                s.Tokens = Math.Min(b.Capacity, s.Tokens + (now - s.At).TotalSeconds * b.PerSecond);
+                s.At = now;
+                if (s.Tokens < 1)
+                {
+                    Metrics.Incr("operation_limited");
+                    return false;
+                }
+                s.Tokens -= 1;
+                return true;
+            }
+        }
+    }
+}

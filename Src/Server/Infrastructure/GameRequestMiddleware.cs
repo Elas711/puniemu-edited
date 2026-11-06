@@ -129,6 +129,12 @@ namespace Puniemu.Src.Server.Infrastructure
                     return;
                 }
 
+                if (exists && !OperationLimiter.Allow(gdkey!, path))
+                {
+                    await WriteDialog(ctx, "You're going a bit fast.\nPlease wait a moment.", "Busy");
+                    return;
+                }
+
                 if (exists)
                 {
                     Metrics.SeenPlayer(gdkey!);

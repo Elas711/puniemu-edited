@@ -85,6 +85,7 @@ namespace Puniemu.Src.DataManager.Logic
         public static string AccountOwnershipMode { get; private set; } = "log";
         // Battle result checks (Src/Server/Infrastructure/AntiCheat.cs): off | log | enforce
         public static string AntiCheatMode { get; private set; } = "log";
+        public static bool OperationRateLimit { get; private set; } = true;
         public static int AntiCheatMinBattleSeconds { get; private set; } = 8;
         public static long AntiCheatMaxScorePerSecond { get; private set; } = 5_000_000;
 
@@ -142,6 +143,7 @@ namespace Puniemu.Src.DataManager.Logic
             ServerStatePath = GetString(config, "ServerStatePath", ServerStatePath);
             AccountOwnershipMode = GetString(config, "AccountOwnershipMode", AccountOwnershipMode).ToLowerInvariant();
             AntiCheatMode = GetString(config, "AntiCheatMode", AntiCheatMode).ToLowerInvariant();
+            OperationRateLimit = GetBool(config, "OperationRateLimit", true);
             AntiCheatMinBattleSeconds = int.TryParse(config["AntiCheatMinBattleSeconds"], out var acs) ? acs : AntiCheatMinBattleSeconds;
             AntiCheatMaxScorePerSecond = long.TryParse(config["AntiCheatMaxScorePerSecond"], out var acp) ? acp : AntiCheatMaxScorePerSecond;
             RateLimitPerMinute = int.TryParse(config["RateLimitPerMinute"], out var rl) ? rl : RateLimitPerMinute;
