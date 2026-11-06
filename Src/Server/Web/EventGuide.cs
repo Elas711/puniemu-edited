@@ -183,6 +183,12 @@ namespace Puniemu.Src.Server.Web
             }
             var userId = body.Value<string>("userId");
             var gdkey = string.IsNullOrWhiteSpace(userId) || userId!.Length > 64 ? null : await UserDataManager.Logic.UserDataManager.GetGdkeyFromUserId(userId);
+            if (!string.IsNullOrEmpty(gdkey) && !Puniemu.Src.Server.Infrastructure.GameRequestMiddleware.IsFromPlayerDevice(ctx, gdkey))
+            {
+                ctx.Response.StatusCode = 403;
+                await ctx.Response.WriteAsync("{\"error\":\"Open this page from the in-game Help menu on your own device.\"}");
+                return;
+            }
             var h = EventManager.History;
             int si = body.Value<int?>("s") ?? -1, ei = body.Value<int?>("e") ?? -1;
             if (string.IsNullOrEmpty(gdkey) || si < 0 || si >= h.Series.Count || ei < 0 || ei >= h.Series[si].Events.Count)

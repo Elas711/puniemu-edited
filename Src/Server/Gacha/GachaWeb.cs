@@ -110,6 +110,8 @@ namespace Puniemu.Src.Server.Gacha
                 var gdkey = await Gdkey(b?.Value<string>("userId"));
                 var s = ServerStateStore.Current.Gacha;
                 if (b == null || gdkey == null) { await Json(ctx, new { error = "Open this page from the in-game Help menu." }, 404); return; }
+                if (!Puniemu.Src.Server.Infrastructure.GameRequestMiddleware.IsFromPlayerDevice(ctx, gdkey))
+                { await Json(ctx, new { error = "Open this page from the in-game Help menu on your own device." }, 403); return; }
                 if (s.CoinShop != "free" && s.CoinShop != "ymoney") { await Json(ctx, new { error = "Coins are not handed out on this server." }, 403); return; }
                 var id = b.Value<int?>("id") ?? 0;
                 if (!GachaLineup.Machines.TryGetValue(id, out var m) || !m.HasCoin)
@@ -117,6 +119,12 @@ namespace Puniemu.Src.Server.Gacha
 
                 await _coinLock.WaitAsync();
                 try
+                {
+                    await Puniemu.Src.Server.Infrastructure.GameRequestMiddleware.WithSaveLockAsync(gdkey, async () => { await GiveCoin(); return 0; });
+                }
+                finally { _coinLock.Release(); }
+
+                async Task GiveCoin()
                 {
                     var choice = await GachaChoice.GetAsync(gdkey);
                     if (choice.CoinDay != Today()) { choice.CoinDay = Today(); choice.CoinsToday = 0; }
@@ -140,7 +148,6 @@ namespace Puniemu.Src.Server.Gacha
                     Log.Info("gacha", $"{gdkey} got a coin for crank-a-kai {id} ({s.CoinShop})");
                     await Json(ctx, new { ok = true, coin = m.CoinName, coinsLeft = s.CoinShop == "free" ? s.FreeCoinsPerDay - choice.CoinsToday : 0, ymoney = userData.YMoney });
                 }
-                finally { _coinLock.Release(); }
             });
 
             app.MapPost("/web/api/gacha/mix", async ctx =>
@@ -148,6 +155,8 @@ namespace Puniemu.Src.Server.Gacha
                 var b = await Body(ctx);
                 var gdkey = await Gdkey(b?.Value<string>("userId"));
                 if (b == null || gdkey == null) { await Json(ctx, new { error = "Open this page from the in-game Help menu." }, 404); return; }
+                if (!Puniemu.Src.Server.Infrastructure.GameRequestMiddleware.IsFromPlayerDevice(ctx, gdkey))
+                { await Json(ctx, new { error = "Open this page from the in-game Help menu on your own device." }, 403); return; }
                 if (!ServerStateStore.Current.Gacha.AllowMix) { await Json(ctx, new { error = "The server owner chooses the crank-a-kai on this server." }, 403); return; }
                 var ids = (b["ids"] as JArray)?.Select(x => x.Value<int?>() ?? 0).Where(GachaLineup.Machines.ContainsKey).Distinct().Take(GachaChoice.MAX_MIX).ToList() ?? new();
                 var choice = await GachaChoice.GetAsync(gdkey);

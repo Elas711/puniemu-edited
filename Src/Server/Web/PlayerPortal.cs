@@ -94,6 +94,12 @@ namespace Puniemu.Src.Server.Web
                 await ctx.Response.WriteAsync("{\"error\":\"Unknown player. Open this page from the in-game Help menu.\"}");
                 return;
             }
+            if (!Puniemu.Src.Server.Infrastructure.GameRequestMiddleware.IsFromPlayerDevice(ctx, gdkey))
+            {
+                ctx.Response.StatusCode = 403;
+                await ctx.Response.WriteAsync("{\"error\":\"Open this page from the in-game Help menu on your own device.\"}");
+                return;
+            }
             var known = EventManager.Catalog.Where(x => x.Selectable).Select(x => x.EventId).ToHashSet();
             var choice = new PlayerEventChoice
             {

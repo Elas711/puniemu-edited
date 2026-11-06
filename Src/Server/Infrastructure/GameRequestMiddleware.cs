@@ -49,6 +49,31 @@ namespace Puniemu.Src.Server.Infrastructure
 
         public static bool LogRequests { get; set; } = false;
 
+        // Where each save last played from. In-game web pages only carry the userId (which other
+        // players can see), so web actions that change a save also need a game request for that
+        // save from the same address in the last hours.
+        private static readonly ConcurrentDictionary<string, (string ip, DateTime at)> _lastSeen = new();
+        private static readonly TimeSpan SEEN_WINDOW = TimeSpan.FromHours(12);
+
+        private static string? Ip(HttpContext ctx) => ctx.Connection.RemoteIpAddress?.ToString();
+
+        public static bool IsFromPlayerDevice(HttpContext ctx, string gdkey)
+        {
+            var ip = Ip(ctx);
+            if (ip == null) return true; // no address (tests, unix sockets): nothing to compare
+            return _lastSeen.TryGetValue(gdkey, out var seen) && seen.ip == ip && DateTime.UtcNow - seen.at < SEEN_WINDOW;
+        }
+
+        // Runs a change to a save outside of a game request (web pages) under the same per-save
+        // lock as the game requests, so neither overwrites the other's changes.
+        public static async Task<T> WithSaveLockAsync<T>(string gdkey, Func<Task<T>> action)
+        {
+            var l = _saveLocks.GetOrAdd(gdkey, _ => new SemaphoreSlim(1, 1));
+            if (!await l.WaitAsync(LOCK_TIMEOUT)) throw new TimeoutException("save is busy");
+            try { return await action(); }
+            finally { l.Release(); }
+        }
+
         // Called when saves move between devices so the ownership cache is rebuilt.
         public static void ForgetOwnership() => _verifiedOwnership.Clear();
 
@@ -103,6 +128,8 @@ namespace Puniemu.Src.Server.Infrastructure
                 if (!string.IsNullOrEmpty(gdkey))
                 {
                     Metrics.SeenPlayer(gdkey);
+                    var ip = Ip(ctx);
+                    if (ip != null) _lastSeen[gdkey] = (ip, DateTime.UtcNow);
                     saveLock = _saveLocks.GetOrAdd(gdkey, _ => new SemaphoreSlim(1, 1));
                     if (!await saveLock.WaitAsync(LOCK_TIMEOUT))
                     {
