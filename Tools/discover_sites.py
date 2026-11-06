@@ -40,7 +40,8 @@ import urllib.request
 import urllib.robotparser
 
 UA = "puniemu-discover/1.0 (fan site index for a Puni Puni server emulator; polite crawler)"
-TIMEOUT = 25
+TIMEOUT = 25           # per socket operation
+DEADLINE = 60          # whole request (a slow server trickling data must not stall the run)
 MAX_BYTES = 2_000_000
 
 # what the game is called around the world
@@ -147,14 +148,24 @@ class Fetcher:
                 req = urllib.request.Request(url, headers=h)
                 with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
                     ctype = r.headers.get("Content-Type", "")
-                    body = r.read(MAX_BYTES)
+                    start, chunks, size = time.time(), [], 0
+                    while size < MAX_BYTES:
+                        if time.time() - start > DEADLINE:
+                            raise TimeoutError("too slow")
+                        c = r.read(65536)
+                        if not c:
+                            break
+                        chunks.append(c)
+                        size += len(c)
+                    body = b"".join(chunks)[:MAX_BYTES]
                     if r.status == 202:  # bot check pages ("please wait"): leave them
                         return None
                     charset = re.search(r"charset=([\w-]+)", ctype)
                     return body.decode(charset.group(1) if charset else "utf-8", errors="replace"), ctype, r.geturl()
             except urllib.error.HTTPError as e:
                 if e.code in (429, 503) and attempt < retries:
-                    time.sleep(int(e.headers.get("Retry-After") or 0) or 10 * (attempt + 1))
+                    ra = e.headers.get("Retry-After") or ""
+                    time.sleep(min(60, int(ra) if ra.isdigit() else 10 * (attempt + 1)))
                     continue
                 if not quiet:
                     print(f"  {e.code} {url[:100]}", file=sys.stderr)
