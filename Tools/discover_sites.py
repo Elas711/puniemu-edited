@@ -348,10 +348,13 @@ SOURCES = [src_archive, src_github, src_gitlab_codeberg, src_wikipedia, src_fand
 # ---- crawler --------------------------------------------------------------------------------
 
 def crawl(f, cat, seeds, depth, max_pages, per_host):
-    queue = collections.deque((u, 0) for u in seeds)
+    # hot: pages known to be relevant and links found on relevant pages; cold: unconfirmed
+    # candidates (e.g. a Wikipedia article's external links) - only when nothing hot is left
+    hot = collections.deque((u, 0) for u in seeds if cat.items.get(norm_url(u) or "", {}).get("score", 1) > 0)
+    cold = collections.deque((u, 0) for u in seeds if cat.items.get(norm_url(u) or "", {}).get("score", 1) == 0)
     seen, pages, per = set(), 0, collections.Counter()
-    while queue and pages < max_pages:
-        url, d = queue.popleft()
+    while (hot or cold) and pages < max_pages:
+        url, d = (hot or cold).popleft()
         url = norm_url(url)
         if not url or url in seen:
             continue
@@ -380,9 +383,9 @@ def crawl(f, cat, seeds, depth, max_pages, per_host):
             if d < depth:
                 # other sites first (new sites are the point), then a few pages of this one
                 for link in sorted(set(p.links), key=lambda x: host_of(x) == host)[:200]:
-                    queue.append((link, d + 1))
+                    hot.append((link, d + 1))
         if pages % 25 == 0:
-            print(f"  crawled {pages} pages, {len(cat.items)} sites known, {len(queue)} queued", flush=True)
+            print(f"  crawled {pages} pages, {len(cat.items)} sites known, {len(hot) + len(cold)} queued", flush=True)
             cat.save()
 
 
