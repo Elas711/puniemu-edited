@@ -57,6 +57,13 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
 * Treat downloaded files as untrusted: parse as data, never execute; Python with `-I`.
 * Commit to the session branch with clear messages; no PR unless asked.
 
+## Conventions (from the code review)
+* Anything that changes a save outside a game request (web pages, admin) must run in
+  `GameRequestMiddleware.WithSaveLockAsync(gdkey, ...)` (not re-entrant: never from inside a game request).
+* Web actions keyed by `userId` (not secret) also check `GameRequestMiddleware.IsFromPlayerDevice`.
+* Handlers read copies of user tables; nothing is saved until `SetYwpUserAsync`, so validate first,
+  write last. Error dialogs must be encrypted (`NHNCrypt.EncryptResponse`).
+
 ## Done recently
 * Balance (`Src/Server/Balance`): BalanceMode rerank/stats/off + BalanceStrength 0-1; rerank maps
   rank by release-year top rank onto E..UZ++ (stat total per rank is fixed), attack skills scaled
