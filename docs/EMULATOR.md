@@ -79,3 +79,12 @@ server with a DNS you control (Pi-hole, your router, or a local DNS app).
 Verified here: the four split APKs are signed with the same key (v1/v2/v3), zip-aligned, the 16
 native libraries stay uncompressed and page-aligned, and only `res/xml/network_security_config.xml`
 differs from the original. Not verified: whether the game's protection accepts a re-signed APK.
+
+## Wibble Wobble clients
+
+Wibble Wobble reads its server from the NHN HSP launching config (`res/xml/hsp_launching_zone.xml`
+on Android, `HSPLaunchingZone.plist` on iOS): the active zone's address + `/hsp` answers
+`getLaunchingInfos`, which names the game server. Puniemu answers `/hsp/...getLaunchingInfos`
+itself, so point the active zone at `http://<your server>:<port>/hsp`. The web tool
+[WibWobPS/wwpatcher](https://github.com/WibWobPS/wwpatcher) does exactly that for `.apk` and `.ipa`
+(and re-signs). Puni Puni 4.177.0 has no launching zone file; see the sections above.
