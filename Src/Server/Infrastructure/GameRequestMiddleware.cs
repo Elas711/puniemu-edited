@@ -118,19 +118,23 @@ namespace Puniemu.Src.Server.Infrastructure
                     return;
                 }
 
-                if (!string.IsNullOrEmpty(gdkey) && !await CheckOwnershipAsync(gdkey, udkey, path))
+                // only saves that exist get checked / locked / counted: made-up ids would otherwise
+                // grow these maps without limit (the account lookup is cached for real players)
+                bool exists = !string.IsNullOrEmpty(gdkey) && await UserDataManager.Logic.UserDataManager.GetAccountFromGdkeyAsync(gdkey) != null;
+
+                if (exists && !await CheckOwnershipAsync(gdkey!, udkey, path))
                 {
                     Metrics.Incr("rejected_ownership");
                     await WriteDialog(ctx, "Authentication error.\nThis save does not belong to this device.", "Error");
                     return;
                 }
 
-                if (!string.IsNullOrEmpty(gdkey))
+                if (exists)
                 {
-                    Metrics.SeenPlayer(gdkey);
+                    Metrics.SeenPlayer(gdkey!);
                     var ip = Ip(ctx);
-                    if (ip != null) _lastSeen[gdkey] = (ip, DateTime.UtcNow);
-                    saveLock = _saveLocks.GetOrAdd(gdkey, _ => new SemaphoreSlim(1, 1));
+                    if (ip != null) _lastSeen[gdkey!] = (ip, DateTime.UtcNow);
+                    saveLock = _saveLocks.GetOrAdd(gdkey!, _ => new SemaphoreSlim(1, 1));
                     if (!await saveLock.WaitAsync(LOCK_TIMEOUT))
                     {
                         saveLock = null;
