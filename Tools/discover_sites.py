@@ -569,6 +569,9 @@ def crawl(f, cat, seeds, depth, max_pages, per_host, deadline=None, frontier_pat
         pages += 1
         if not r or "html" not in r[1].lower():
             continue
+        final = host_of(r[2])  # where a redirect ended (login pages, file hosts)
+        if in_set(final, FILE_HOSTS) or in_set(final, NO_CRAWL) or final.startswith(("accounts.", "access.", "login.", "auth.")):
+            continue
         p = Page(r[2])
         try:
             p.feed(r[0])
