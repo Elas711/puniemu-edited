@@ -405,6 +405,18 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEnd.Logic
                 await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(errSession)));
                 return;
             }
+            // plausibility of the result (AntiCheatMode); the score still has the +10000 above
+            var started = await UDM.GetYwpUserAsync<long?>(deserialized.Gdkey!, Puniemu.Src.Server.Infrastructure.AntiCheat.BATTLE_STARTED);
+            var findings = Puniemu.Src.Server.Infrastructure.AntiCheat.CheckBattle(deserialized.Gdkey!, started, gameEndType == GameEndType.GameEnd,
+                deserialized.Score - (gameEndType == GameEndType.GameEnd ? 10000 : 0), deserialized.ClearTimeSec, deserialized.ComboMax, deserialized.CheatFlg,
+                new[] { deserialized.DamageTotal, deserialized.EraseNumTotal, deserialized.EraseSizeMax, deserialized.FeverTimeNum, deserialized.LinkSizeMax, deserialized.EventPoint });
+            if (Puniemu.Src.Server.Infrastructure.AntiCheat.Rejects(findings))
+            {
+                await UDM.SetYwpUserAsync(deserialized.Gdkey!, "ywp_user_requestid", ""); // the session is used up
+                var rejected = new MsgBoxResponse("This battle result was not accepted.", "Battle");
+                await ctx.Response.WriteAsync(NHNCrypt.Logic.NHNCrypt.EncryptResponse(JsonConvert.SerializeObject(rejected)));
+                return;
+            }
             var jsonLevelData = JsonConvert.DeserializeObject<Dictionary<string, StageData>>(DataManager.Logic.DataManager.GameDataManager!.GamedataCache["stage_data"]);
             if (jsonLevelData == null || !(jsonLevelData.ContainsKey(deserialized.StageId.ToString())))
             {

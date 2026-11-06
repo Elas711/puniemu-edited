@@ -343,6 +343,9 @@ empty, it defaults to `PublicServerURL + /dataDownload/`.
   logged with the full exception.
 * Bans and maintenance mode are enforced on every request.
 * Optional check that the device sending a request owns the save (`AccountOwnershipMode`).
+* Battle result checks (`AntiCheatMode`, ideas from WibWobPS/JibaAC): clears faster than the
+  stage can be played, a clear time longer than the battle, scores above a cap and the game's own
+  `cheatFlg` are listed in admin -> Logs, or rejected with `enforce`.
 * Per-IP rate limit (`RateLimitPerMinute`).
 * Account link/restore codes: cryptographic RNG, 15 minute expiry, lockout after 5 wrong codes, and
   an answer when a code is wrong (before, the game got no response).
@@ -392,6 +395,9 @@ All keys are optional except `PostgresConnectionString` and `IsWibWob`.
 | `TranslationsPath` / `EventsPath` / `WebPath` / `AssetOverlayPath` | `Translations` / `Events` / `Web` / `AssetOverlay` | folders |
 | `ServerStatePath` | `server_state.json` | runtime settings file |
 | `AccountOwnershipMode` | `log` | `off`, `log` or `enforce` |
+| `AntiCheatMode` | `log` | battle result checks: `off`, `log` (admin -> Logs) or `enforce` (reject) |
+| `AntiCheatMinBattleSeconds` | `8` | a stage cleared faster than this is flagged |
+| `AntiCheatMaxScorePerSecond` | `5000000` | score cap: 1,000,000 + this x battle seconds |
 | `RateLimitPerMinute` | `900` | per IP, `0` = off |
 | `TrustProxyHeaders` | `false` | trust `X-Forwarded-*` (only behind your own proxy) |
 | `MaxGdkeysPerDevice` | `3` | saves per device |

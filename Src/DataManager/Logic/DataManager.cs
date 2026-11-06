@@ -83,6 +83,10 @@ namespace Puniemu.Src.DataManager.Logic
 
         // off | log | enforce: check that the device sending a request owns the save it names.
         public static string AccountOwnershipMode { get; private set; } = "log";
+        // Battle result checks (Src/Server/Infrastructure/AntiCheat.cs): off | log | enforce
+        public static string AntiCheatMode { get; private set; } = "log";
+        public static int AntiCheatMinBattleSeconds { get; private set; } = 8;
+        public static long AntiCheatMaxScorePerSecond { get; private set; } = 5_000_000;
 
         // Requests per minute allowed per IP address. 0 disables rate limiting.
         public static int RateLimitPerMinute { get; private set; } = 900;
@@ -137,6 +141,9 @@ namespace Puniemu.Src.DataManager.Logic
             AssetOverlayPath = GetString(config, "AssetOverlayPath", AssetOverlayPath);
             ServerStatePath = GetString(config, "ServerStatePath", ServerStatePath);
             AccountOwnershipMode = GetString(config, "AccountOwnershipMode", AccountOwnershipMode).ToLowerInvariant();
+            AntiCheatMode = GetString(config, "AntiCheatMode", AntiCheatMode).ToLowerInvariant();
+            AntiCheatMinBattleSeconds = int.TryParse(config["AntiCheatMinBattleSeconds"], out var acs) ? acs : AntiCheatMinBattleSeconds;
+            AntiCheatMaxScorePerSecond = long.TryParse(config["AntiCheatMaxScorePerSecond"], out var acp) ? acp : AntiCheatMaxScorePerSecond;
             RateLimitPerMinute = int.TryParse(config["RateLimitPerMinute"], out var rl) ? rl : RateLimitPerMinute;
             TrustProxyHeaders = GetBool(config, "TrustProxyHeaders", false);
             SkipOpeningTutorial = GetBool(config, "SkipOpeningTutorial", false);

@@ -379,6 +379,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.Game.GameStart.Logic
             await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(deserialized!.Gdkey!, "ywp_user_requestid", res.RequestID);
             // the battle this session is for: gameEnd must report the same stage
             await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(deserialized!.Gdkey!, "puniemu_battle_stage", deserialized.StageId);
+            await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(deserialized!.Gdkey!, Puniemu.Src.Server.Infrastructure.AntiCheat.BATTLE_STARTED, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
             res.UserData = userData;
             var resdict = JsonConvert.DeserializeObject<Dictionary<string,object?>>(JsonConvert.SerializeObject(res));
             

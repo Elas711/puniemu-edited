@@ -55,6 +55,12 @@ namespace Puniemu.Src.Server.Admin
                     skillsScaled = Puniemu.Src.Server.Balance.BalanceManager.SkillsScaled,
                     factors = Puniemu.Src.Server.Balance.BalanceManager.Factors.OrderBy(k => k.Key).ToDictionary(k => k.Key.ToString(), k => Math.Round(k.Value, 2))
                 },
+                anticheat = new
+                {
+                    mode = AntiCheat.Mode,
+                    recent = AntiCheat.Recent.Take(100),
+                    players = AntiCheat.PerPlayer.OrderByDescending(kv => kv.Value).Take(20).ToDictionary(kv => kv.Key, kv => kv.Value)
+                },
                 state = ServerStateStore.Current
             });
 

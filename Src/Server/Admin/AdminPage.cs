@@ -85,6 +85,7 @@ pre{white-space:pre-wrap;font-size:12px;max-height:520px;overflow:auto;margin:0}
 <div class=""row""><button class=""ghost"" id=""tdl"">Download untranslated texts</button><span class=""muted"">Translate them by hand or with Tools/machine_translate.py, put the file in Translations/&lt;language&gt;/ and restart.</span></div></div></section>
 
 <section id=""t-logs"" class=""hidden""><div class=""card""><h2>Unimplemented requests</h2><p class=""muted"">Requests the game sent that Puniemu does not implement yet (decrypted, last 3 per endpoint, kept until restart). ""acknowledged"" ones get a plain success answer.</p><div id=""unimpl""></div></div>
+<div class=""card""><h2>Anti-cheat</h2><p class=""muted"">Battle results that look impossible (too fast, clear time longer than the battle, score above the cap, the game's own cheat flag). <code>AntiCheatMode</code>: <b>log</b> only lists them, <b>enforce</b> rejects them, <b>off</b>.</p><div id=""acheat""></div></div>
 <div class=""card""><h2>Recent server log</h2><pre id=""logs""></pre></div></section>
 </main><div id=""toast""></div>
 <script>
@@ -121,6 +122,7 @@ function load(t){
  if(t==='events')api('GET','/admin/api/events').then(function(e){EV=e;var s=e.settings;document.querySelectorAll('[name=emode]').forEach(function(r){r.checked=r.value===s.mode;});
   $('eplayer').checked=s.allowPlayerChoice;$('ehide').checked=s.hideInactiveEventMaps;$('edays').value=s.eventDurationDays;$('rdays').value=s.rotationDays;$('rcount').value=s.rotationCount;
   loadHistory();$('enow').textContent=e.runningNow?'Running now: '+e.runningNow.join(', '):'Running now: original data';renderEvents();}).catch(fail);
+ if(t==='logs')api('GET','/admin/api/overview').then(function(o){var a=o.anticheat||{};$('acheat').innerHTML='<p>Mode: <b>'+esc(a.mode)+'</b> &middot; '+(a.recent||[]).length+' recent findings</p>'+((a.recent||[]).length?'<table><tr><th>When (UTC)</th><th>Player</th><th>Rule</th><th>Detail</th></tr>'+a.recent.map(function(f){return '<tr><td>'+esc(String(f.At).replace('T',' ').slice(0,19))+'</td><td title=""'+esc(f.Gdkey)+'"">'+esc(f.Gdkey.slice(0,8))+'</td><td>'+esc(f.Rule)+'</td><td>'+esc(f.Detail)+'</td></tr>';}).join('')+'</table>':'');}).catch(fail);
  if(t==='logs')api('GET','/admin/api/logs').then(function(l){$('logs').textContent=l.slice().reverse().join('\n');}).catch(fail);
  if(t==='logs')api('GET','/admin/api/unimplemented').then(function(u){$('unimpl').innerHTML=u.length?u.map(function(r){return '<details><summary><b>'+esc(r.endpoint)+'</b> &middot; '+r.count+'x'+(r.acknowledged?' <span class=""muted"">(acknowledged)</span>':'')+'</summary>'+
   r.samples.map(function(x){return '<pre>'+esc(x)+'</pre>';}).join('')+'</details>';}).join(''):'<p class=""muted"">None so far.</p>';}).catch(fail);
