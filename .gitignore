@@ -437,3 +437,6 @@ Translations/*/untranslated.json
 AssetOverlay/
 Tools/.cache/
 test_account.json
+
+# Tools/discover_sites.py output
+sites_found/

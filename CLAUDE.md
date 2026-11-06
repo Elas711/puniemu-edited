@@ -37,7 +37,8 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
   `Tools/fetch_gacha_rates.py`.
 * Web pages (in-game): wiki `Src/Server/Web/Wiki`, Event Guide, portal; admin `/admin`.
 * Data sources / archives: `docs/ARCHIVES.md` (archive.org items, MediaFire packs,
-  `Tools/remote_zip.py`, `Tools/mediafire_download.py --direct <link>`).
+  `Tools/remote_zip.py`, `Tools/mediafire_download.py --direct <link>`); find new sites with
+  `python -I Tools/discover_sites.py --out sites_found` (search APIs + polite crawler, no file hosts).
 * Client testing without patching: `docs/EMULATOR.md`, `Tools/make_certs.sh`,
   `Tools/patch_apk.py` (network config trusts user CAs, re-sign splits).
 

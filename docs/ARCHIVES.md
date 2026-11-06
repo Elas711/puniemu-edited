@@ -59,3 +59,19 @@ The data in these uploads belongs to LEVEL-5; use it only for your own private s
 The real pools of the coin machines come from the official odds pages, see
 `Tools/fetch_gacha_rates.py` (live server) - saved pages from a client cache work too (`--pages`,
 `--offline`).
+
+## Finding more sites: `Tools/discover_sites.py`
+
+```
+python -I Tools/discover_sites.py --out sites_found               # search APIs + crawler
+python -I Tools/discover_sites.py --out sites_found --no-crawl    # search APIs only (~2 min)
+python -I Tools/discover_sites.py --out sites_found --seed https://example.com/page
+```
+
+Searches the keyless public APIs (archive.org, GitHub / GitLab / Codeberg, Wikipedia in 7 languages
+and their external links, Wikimedia Commons, Fandom wikis, Hacker News, StackExchange), then crawls
+from the results (robots.txt respected, 1.5 s between requests per host, HTML only) and keeps pages
+whose text is about Puni Puni / Wibble Wobble. Runs merge into `sites_found/sites.json` and
+`sites_found/SITES.md` (by category). `GITHUB_TOKEN` raises the GitHub limit.
+Not used: result pages of search engines and sites behind bot checks or logins (Reddit, X, Discord);
+file hosts are never followed or listed.
