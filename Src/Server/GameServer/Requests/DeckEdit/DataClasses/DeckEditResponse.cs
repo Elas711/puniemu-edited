@@ -12,7 +12,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.DeckEdit.DataClasses
             ResultType = 0;
             NextScreenType = 0;
         }
-        public Task<Dictionary<string, object>> ToDictionary()
+        public new Task<Dictionary<string, object>> ToDictionary()
         {
             var dict = new Dictionary<string, object>
             {

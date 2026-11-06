@@ -51,7 +51,6 @@ public class ExecuteGachaResponseConverter : JsonConverter<ExecuteGachaResponse>
 
             responseObj.Remove("gachaPrizeList");
         }
-    normalWrite:
         responseObj.WriteTo(writer);
     }
 

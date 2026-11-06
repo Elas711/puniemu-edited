@@ -15,6 +15,11 @@ namespace Puniemu.Src.Server.GameServer.Requests.LoginStamp.Logic
     public class LoginStampHandler
     {
         //randomly choose stamp for avoiding need to edit it manually
+        // A new stamp every calendar day (server time, like the day counter in ywp_user_data),
+        // not only 24 hours after the last one (that pushed the stamp later every day).
+        private static bool IsLaterDay(long nowUnix, long lastUnix) =>
+            DateTimeOffset.FromUnixTimeSeconds(nowUnix).ToLocalTime().Date > DateTimeOffset.FromUnixTimeSeconds(lastUnix).ToLocalTime().Date;
+
         public static async Task HandleAsync(HttpContext ctx)
         {
             ctx.Request.EnableBuffering();
@@ -70,7 +75,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.LoginStamp.Logic
             // change stamp if stamp finished
             foreach (string[] elements in LoginStamp.Table)
             {
-                if (int.Parse(elements[0]) == StampId && daysSinceEpoch2 > (long.Parse(LoginUserStampTable.Table[0][0]) + 86400) && (day + 1) > int.Parse(elements[2]))
+                if (int.Parse(elements[0]) == StampId && IsLaterDay(daysSinceEpoch2, long.Parse(LoginUserStampTable.Table[0][0])) && (day + 1) > int.Parse(elements[2]))
                 {
                     StampId = random.Next(1, LoginStamLenght);
                     walk = 1;
@@ -84,7 +89,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.LoginStamp.Logic
             }
 
             // update day
-            if (daysSinceEpoch2 > (long.Parse(LoginUserStampTable.Table[0][0]) + 86400))
+            if (IsLaterDay(daysSinceEpoch2, long.Parse(LoginUserStampTable.Table[0][0])))
             {
                 await MissionManager.UpdateProgress(deserialized.Level5UserID, GameServer.DataClasses.Mission.MissionType.TotalLoginDays, 1);
                 walk = 1;

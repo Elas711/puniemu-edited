@@ -18,7 +18,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.UserInfoRefresh.DataClasses
             UserData = userData;
             ResultType = 0;
         }
-        public Dictionary<string, object> ToDictionary()
+        public new Dictionary<string, object> ToDictionary()
         {
             var dict = new Dictionary<string, object>
             {
