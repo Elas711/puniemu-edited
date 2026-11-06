@@ -40,7 +40,7 @@ Legend: **yes** implemented, *ok* acknowledged (success answer, nothing stored),
 | `resultEventArea.nhn` |  |
 | `resultEventRanking.nhn` |  |
 | `selectTeam.nhn` |  |
-| `updateEventTutorialFlg.nhn` | *ok* |
+| `updateEventTutorialFlg.nhn` | **yes** |
 | `updateTeamResultReadFlg.nhn` | *ok* |
 | `useEventAddition.nhn` |  |
 

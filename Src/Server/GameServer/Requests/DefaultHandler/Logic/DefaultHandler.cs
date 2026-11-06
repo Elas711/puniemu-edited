@@ -20,7 +20,7 @@ namespace Puniemu.Src.Server.GameServer.Requests.DefaultHandler.Logic
         // Endpoints whose answer the client only checks for success.
         private static readonly HashSet<string> ACKNOWLEDGE = new(StringComparer.OrdinalIgnoreCase)
         {
-            "writeAppLog.nhn", "storeReview.nhn", "deferAdsPlay.nhn", "updateEventTutorialFlg.nhn",
+            "writeAppLog.nhn", "storeReview.nhn", "deferAdsPlay.nhn",
             "updateTrainingTutorialFlg.nhn", "updateTeamResultReadFlg.nhn", "updateNekomataInkFlg.nhn",
             "updateNekomataClearFlg.nhn", "updateMyfave.nhn", "updateCampaignInfo.nhn", "purchaseFailure.nhn"
         };

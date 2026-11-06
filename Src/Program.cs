@@ -311,6 +311,7 @@ class Program
             await UpdateProfileHandler.HandleAsync(ctx);
         });
         app.MapPost("/getEventMaster.nhn", async ctx => await Puniemu.Src.Server.GameServer.Requests.Extra.ExtraHandlers.GetEventMasterAsync(ctx));
+        app.MapPost("/updateEventTutorialFlg.nhn", async ctx => await Puniemu.Src.Server.GameServer.Requests.Extra.ExtraHandlers.UpdateEventTutorialFlgAsync(ctx));
         app.MapPost("/missionRewardAll.nhn", async ctx => await Puniemu.Src.Server.GameServer.Requests.Extra.ExtraHandlers.MissionRewardAllAsync(ctx));
         app.MapPost("/receivePresentBox.nhn", async ctx =>
         {

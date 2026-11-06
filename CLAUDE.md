@@ -65,8 +65,7 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
 
 ## Open work (keep this list current; take the top item)
 0. Balance: strong skills (ywp_mst_youkai_strong_skill_level) and non-attack skills are not scaled yet.
-1. Endpoints whose layout is in `docs/PROTOCOL.md` but not implemented: `updateEventTutorialFlg`
-   (store `ywp_user_event_tutorial`), `recvEventReward(All)`, `getEventRanking`, `gameStartEvent` /
+1. Endpoints whose layout is in `docs/PROTOCOL.md` but not implemented: `recvEventReward(All)`, `getEventRanking`, `gameStartEvent` /
    `gameEndEvent` / `gameContinueEvent`, `gameContinueScoreAttack`, `resultScoreAttack`,
    `executeContinueGacha`, `getGachaResult`, `presentHitodama`, `onedariHitodama`.
 2. Calls only in 4.x (`deckEditMulti`, `getEventCondition`, `getEventQuest`, `getEventMessage`...):

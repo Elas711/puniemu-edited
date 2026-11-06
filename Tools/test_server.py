@@ -121,6 +121,7 @@ def main():
         c.call(ep, {**base, "gdkeyValue": gdkey, "collectId": 1})
     c.call("receivePresentBox.nhn", {**base, "seqs": []})
     c.call("writeAppLog.nhn", {**base, "log": "test"})
+    c.call("updateEventTutorialFlg.nhn", {**base, "eventId": 1264, "eventNo": 0, "tutorialId": 1})
 
     # a crank-a-kai pull on the Y-Money machine (price type 1 in ywp_mst_gacha)
     gacha = c.call("initGacha.nhn", base).get("ywp_mst_gacha") or ""

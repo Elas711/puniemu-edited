@@ -51,6 +51,29 @@ namespace Puniemu.Src.Server.GameServer.Requests.Extra
             await Send(ctx, res);
         }
 
+        // updateEventTutorialFlg.nhn: the player has seen an event's tutorial page
+        // (request eventId, eventNo, tutorialId); answers with ywp_user_event_tutorial.
+        // Row layout {eventId, eventNo, tutorialId} as in ywp_user_event_condition (not confirmed
+        // against the official server).
+        public static async Task UpdateEventTutorialFlgAsync(HttpContext ctx)
+        {
+            var req = await ReadRequest(ctx);
+            var gdkey = Gdkey(req);
+            JArray list;
+            try { list = await UserDataManager.Logic.UserDataManager.GetYwpUserAsync<JArray>(gdkey, "ywp_user_event_tutorial") ?? new JArray(); }
+            catch (Exception) { list = new JArray(); } // older saves may hold "" here
+            long eventId = req.Value<long?>("eventId") ?? 0, eventNo = req.Value<long?>("eventNo") ?? 0, tutorialId = req.Value<long?>("tutorialId") ?? 0;
+            if (eventId > 0 && !list.OfType<JObject>().Any(o => o.Value<long?>("eventId") == eventId && o.Value<long?>("eventNo") == eventNo && o.Value<long?>("tutorialId") == tutorialId))
+            {
+                list.Add(new JObject { ["eventId"] = eventId, ["eventNo"] = eventNo, ["tutorialId"] = tutorialId });
+                await UserDataManager.Logic.UserDataManager.SetYwpUserAsync(gdkey, "ywp_user_event_tutorial", list);
+            }
+            var res = await Common();
+            res["ywp_user_event_tutorial"] = list;
+            await GeneralUtils.AddTablesToResponse(new[] { "ywp_user_data", "ywp_user_icon_budge" }, res, false, gdkey);
+            await Send(ctx, res);
+        }
+
         // missionRewardAll.nhn: claims every mission that is complete and waiting for its reward.
         // Each one goes through the normal missionReward.nhn logic (rewards, next mission unlocks);
         // the answer of the last claim carries all the updated tables.

@@ -1187,7 +1187,7 @@ Every request also carries the common fields (`appVer`, `deviceID`, `level5UserI
   * `UserIconBudgeList`: ywp_user_icon_budge
   * `MasterVersionMaster`: ywp_mst_version_master
 
-## `updateEventTutorialFlg.nhn`
+## `updateEventTutorialFlg.nhn` (implemented)
 
 * request: `eventId`, `eventNo`, `tutorialId`
 * response parts:
