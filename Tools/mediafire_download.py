@@ -132,9 +132,16 @@ def sha256(path):
     return h.hexdigest()
 
 
+def safe_rel(name):
+    """File / folder names come from MediaFire: keep them inside the output folder."""
+    parts = [p for p in re.split(r"[\\/]+", name) if p not in ("", ".", "..")]
+    parts = [re.sub(r'[<>:"|?*\x00-\x1f]', "_", p) for p in parts]
+    return os.path.join(*parts) if parts else "download"
+
+
 def get_file(s, key, dest_dir, rel=None, direct=None):
     info = file_info(s, key)
-    name = rel or info["filename"]
+    name = safe_rel(rel or info["filename"])
     dest = os.path.join(dest_dir, name)
     os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
     size = int(info.get("size") or 0)

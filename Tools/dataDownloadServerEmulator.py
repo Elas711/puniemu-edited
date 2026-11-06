@@ -16,4 +16,5 @@ def download_file(filename):
         abort(404)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # never debug=True here: the Werkzeug debugger lets anyone who can reach the port run code
+    app.run(host='0.0.0.0', port=5000, debug=False)
