@@ -31,7 +31,7 @@ namespace Puniemu.Src.Server.Web
             var html = PAGE
                 .Replace("{{SERVER_NAME}}", WebUtility.HtmlEncode(DataManager.Logic.DataManager.ServerName ?? "Puniemu"))
                 .Replace("{{MOTD}}", WebUtility.HtmlEncode(ServerStateStore.Current.Motd).Replace("\n", "<br>"))
-                .Replace("{{USER_ID}}", JsonConvert.SerializeObject(ctx.Request.Query["userId"].ToString()));
+                .Replace("{{USER_ID}}", Puniemu.Src.Utils.GeneralUtils.GeneralUtils.JsString(ctx.Request.Query["userId"].ToString()));
             await ctx.Response.WriteAsync(html);
         }
 

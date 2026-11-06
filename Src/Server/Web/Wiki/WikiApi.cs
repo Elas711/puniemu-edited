@@ -33,7 +33,7 @@ namespace Puniemu.Src.Server.Web.Wiki
                 ctx.Response.Headers["Cache-Control"] = "no-store";
                 await ctx.Response.WriteAsync(WikiPage.HTML
                     .Replace("{{SERVER_NAME}}", WebUtility.HtmlEncode(DataManager.Logic.DataManager.ServerName ?? "Puniemu"))
-                    .Replace("{{USER_ID}}", JsonConvert.SerializeObject(ctx.Request.Query["userId"].ToString())));
+                    .Replace("{{USER_ID}}", Puniemu.Src.Utils.GeneralUtils.GeneralUtils.JsString(ctx.Request.Query["userId"].ToString())));
             });
             app.MapGet("/web/wiki/img/{name}", StaticContent.HandleAssetAsync);
 

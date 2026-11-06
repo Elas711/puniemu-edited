@@ -28,6 +28,12 @@ namespace Puniemu.Src.Utils.GeneralUtils
             return gdkeys ?? new List<string>();
         }
 
+        // A string for a <script> block: JSON with < > & ' " escaped, so a value like
+        // "</script><script>..." from the URL can't end the script (reflected XSS).
+        public static string JsString(string? value) =>
+            Newtonsoft.Json.JsonConvert.SerializeObject((value ?? "").Length > 64 ? "" : value ?? "",
+                new Newtonsoft.Json.JsonSerializerSettings { StringEscapeHandling = Newtonsoft.Json.StringEscapeHandling.EscapeHtml });
+
         public static string PickSave(List<string> gdkeys, string? preferred)
         {
             if (!string.IsNullOrEmpty(preferred) && gdkeys.Contains(preferred)) return preferred;

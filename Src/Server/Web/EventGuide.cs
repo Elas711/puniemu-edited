@@ -227,7 +227,7 @@ namespace Puniemu.Src.Server.Web
             ctx.Response.Headers["Cache-Control"] = "no-store";
             await ctx.Response.WriteAsync(GuidePage.HTML
                 .Replace("{{SERVER_NAME}}", WebUtility.HtmlEncode(DataManager.Logic.DataManager.ServerName ?? "Puniemu"))
-                .Replace("{{USER_ID}}", JsonConvert.SerializeObject(ctx.Request.Query["userId"].ToString())));
+                .Replace("{{USER_ID}}", Puniemu.Src.Utils.GeneralUtils.GeneralUtils.JsString(ctx.Request.Query["userId"].ToString())));
         }
     }
 }
