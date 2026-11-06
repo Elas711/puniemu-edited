@@ -303,7 +303,11 @@ namespace Puniemu.Src.Server.GameServer.Requests.GameEnd.Logic
                 // add youkai to dictionary
                 DictionaryManager.EditDictionary(ref dictionaryYoukaiTable, YoukaiId, true, false);
                 DictionaryManager.EditDictionary(ref dictionaryDiff, YoukaiId, true, false);
-                // add yokai if befriend
+                // add yokai if befriend (and the server's lottery allowed it - AntiCheatMode)
+                int foodLevel = i.UseItemLLarge > 0 ? 4 : i.UseItemLarge > 0 ? 3 : i.UseItemMiddle > 0 ? 2 : i.UseItemSmall > 0 ? 1 : 0;
+                if (i.DropYoukaiFlg == 1 && !Puniemu.Src.Server.Infrastructure.AntiCheat.BefriendAllowed(deserialized.Gdkey!, i.EnemyId,
+                        lastEnemies.Where(x => x.EnemyID == i.EnemyId).SelectMany(x => x.LotYoukaiInfoList?.Entries ?? new()).Select(e => e.LotResult), foodLevel))
+                    i.DropYoukaiFlg = 0;
                 if (i.DropYoukaiFlg == 1)
                 {
                     if (YoukaiId != 0)

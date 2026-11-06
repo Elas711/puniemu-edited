@@ -344,8 +344,9 @@ empty, it defaults to `PublicServerURL + /dataDownload/`.
 * Bans and maintenance mode are enforced on every request.
 * Optional check that the device sending a request owns the save (`AccountOwnershipMode`).
 * Battle result checks (`AntiCheatMode`, ideas from WibWobPS/JibaAC): clears faster than the
-  stage can be played, a clear time longer than the battle, scores above a cap and the game's own
-  `cheatFlg` are listed in admin -> Logs, or rejected with `enforce`.
+  stage can be played, a clear time longer than the battle, scores above a cap, the game's own
+  `cheatFlg` and befriends the server's befriend lottery never allowed (idea from WibWobPS/wwps) are
+  listed in admin -> Logs; `enforce` rejects the result (or drops the befriend).
 * Per-IP rate limit (`RateLimitPerMinute`).
 * Account link/restore codes: cryptographic RNG, 15 minute expiry, lockout after 5 wrong codes, and
   an answer when a code is wrong (before, the game got no response).

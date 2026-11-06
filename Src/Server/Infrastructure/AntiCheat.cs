@@ -58,6 +58,22 @@ namespace Puniemu.Src.Server.Infrastructure
 
         public static bool Rejects(List<Finding> findings) => Mode == "enforce" && findings.Count > 0;
 
+        // A befriend the client claims must be one the server's lottery allowed: gameStart sends a
+        // lotResult per soultimate pattern ("10110": one bit per food level, none .. 4-heart).
+        // Lenient on purpose: any pattern allowing that food level is enough (as in WibWobPS/wwps).
+        // Returns false when the befriend must be dropped (enforce).
+        public static bool BefriendAllowed(string gdkey, long enemyId, IEnumerable<string> lotResults, int foodLevel)
+        {
+            if (Mode == "off") return true;
+            var results = lotResults.Where(r => !string.IsNullOrEmpty(r)).ToList();
+            // no lottery at all = the enemy can't be befriended in this battle (no food type, before the
+            // Jibanyan tutorial, soultimate maxed); story befriends get "11111"
+            if (results.Any(r => foodLevel < r.Length && r[foodLevel] == '1')) return true;
+            Record(new Finding(DateTime.UtcNow, gdkey, "befriend.not_rolled",
+                $"befriended enemy {enemyId} with food level {foodLevel}, lottery {(results.Count == 0 ? "none" : string.Join(",", results.Distinct().Take(4)))}"));
+            return Mode != "enforce";
+        }
+
         private static void Record(Finding f)
         {
             _recent.Enqueue(f);
