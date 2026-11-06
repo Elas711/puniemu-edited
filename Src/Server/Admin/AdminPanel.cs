@@ -106,7 +106,8 @@ namespace Puniemu.Src.Server.Admin
                 var b = await ReadJson(ctx);
                 var items = b["items"]?.ToObject<List<ItemGrant>>() ?? new();
                 var youkai = b["youkai"]?.ToObject<List<long>>() ?? new();
-                var r = await GrantService.GrantAsync(gdkey, b.Value<int?>("ymoney") ?? 0, b.Value<int?>("spirits") ?? 0, items, youkai);
+                // same lock as the player's own requests, so a request running now can't undo the grant
+                var r = await Puniemu.Src.Server.Infrastructure.GameRequestMiddleware.WithSaveLockAsync(gdkey, () => GrantService.GrantAsync(gdkey, b.Value<int?>("ymoney") ?? 0, b.Value<int?>("spirits") ?? 0, items, youkai));
                 Log.Info("admin", $"granted to {gdkey}: {b.ToString(Formatting.None)}");
                 return r;
             });
@@ -172,7 +173,7 @@ namespace Puniemu.Src.Server.Admin
                     foreach (var k in new[] { "userId", "characterId" }) if (o[k] != null) n[k] = o[k];
                     dict["ywp_user_data"] = n;
                 }
-                await UDM.SetEntireUserData(gdkey, dict);
+                await Puniemu.Src.Server.Infrastructure.GameRequestMiddleware.WithSaveLockAsync(gdkey, async () => { await UDM.SetEntireUserData(gdkey, dict); return 0; });
                 Log.Info("admin", $"imported a save into {gdkey}");
                 return new { ok = true, tables = dict.Count };
             });
@@ -183,9 +184,13 @@ namespace Puniemu.Src.Server.Admin
                 var b = await ReadJson(ctx);
                 var name = Puniemu.Src.Utils.GeneralUtils.GeneralUtils.SanitizePlayerText(b.Value<string>("name"));
                 if (name.Length == 0) throw new InvalidOperationException("Empty name");
-                var ud = await UDM.GetYwpUserAsync<YwpUserData>(gdkey, "ywp_user_data") ?? throw new KeyNotFoundException("No player data");
-                ud.PlayerName = name;
-                await UDM.SetYwpUserAsync(gdkey, "ywp_user_data", ud);
+                await Puniemu.Src.Server.Infrastructure.GameRequestMiddleware.WithSaveLockAsync(gdkey, async () =>
+                {
+                    var ud = await UDM.GetYwpUserAsync<YwpUserData>(gdkey, "ywp_user_data") ?? throw new KeyNotFoundException("No player data");
+                    ud.PlayerName = name;
+                    await UDM.SetYwpUserAsync(gdkey, "ywp_user_data", ud);
+                    return 0;
+                });
                 await Puniemu.Src.Server.GameServer.Logic.GenerateFriendData.RefreshYwpUserFriend(gdkey, -1, -1, name, -1, "");
                 return new { ok = true, name };
             });
