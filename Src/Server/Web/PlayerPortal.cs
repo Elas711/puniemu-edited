@@ -143,6 +143,7 @@ button.sec{background:#f1e6d6;color:var(--ink)}
 <div class=""card""><h2>News</h2><div>{{MOTD}}</div></div>
 <a href=""#"" id=""guideLink"" style=""display:block;background:#7048e8;color:#fff;text-align:center;font-weight:800;padding:14px;border-radius:14px;margin-bottom:12px;text-decoration:none"">&#128214; Open the Event Guide (characters, stories, bonuses, help)</a>
 <a href=""#"" id=""wikiLink"" style=""display:block;background:#1c7ed6;color:#fff;text-align:center;font-weight:800;padding:14px;border-radius:14px;margin-bottom:12px;text-decoration:none"">&#128218; Open the Wiki (Yo-kai, stages, items, crank-a-kai, guides)</a>
+<a href=""#"" id=""scwordLink"" style=""display:block;background:#e8892b;color:#fff;text-align:center;font-weight:800;padding:14px;border-radius:14px;margin-bottom:12px;text-decoration:none"">&#128273; Enter a secret word</a>
 <div class=""card"" id=""choiceCard""><h2>Which events do you want to play?</h2>
 <div class=""mode"">
 <label><input type=""radio"" name=""mode"" value=""server"" checked>Same as the server <span class=""muted"" id=""serverInfo""></span></label>
@@ -192,6 +193,7 @@ function load(){req('GET','/web/api/events?userId='+encodeURIComponent(USER_ID),
 $('filter').oninput=render;
 $('guideLink').href='/web/guide.nhn?userId='+encodeURIComponent(USER_ID);
 $('wikiLink').href='/web/wiki.nhn?userId='+encodeURIComponent(USER_ID);
+$('scwordLink').href='/web/scword.nhn?userId='+encodeURIComponent(USER_ID);
 $('all').onclick=function(){if(mode()!=='custom')return;data.choice.ids=data.events.map(function(e){return e.eventId;});render();};
 $('none').onclick=function(){if(mode()!=='custom')return;data.choice.ids=[];render();};
 $('save').onclick=function(){req('POST','/web/api/events',{userId:USER_ID,mode:mode(),ids:data.choice.ids},function(st,j){
