@@ -54,6 +54,8 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
   decompilation; server host built at runtime from `https://%s.com/`. No cert pinning in the game.
 * Official odds pages: `gameserver.yw-p.com/web/viewpage.nhn?userId=MA==&webviewId=GASHA_...`
   (ids in `ywp_mst_coin_purchase_master` col 13, coin item col 8).
+* The container sleeps when the session is idle: `setsid nohup` jobs die with it. Long jobs: Bash
+  `run_in_background` (max 2 h per call, chain them).
 * `web.archive.org` resets connections from cloud IPs; `archive.org` search/metadata/download work.
 * MediaFire pages are behind Cloudflare for servers; `download*.mediafire.com` links work.
 
