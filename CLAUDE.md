@@ -64,7 +64,7 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
   MasterVersions raises mstVersionMaster once per content change (master_version.json).
 
 ## Open work (keep this list current; take the top item)
-0. Balance: strong skills (ywp_mst_youkai_strong_skill_level) and non-attack skills are not scaled yet.
+0. Balance: strong skills (ywp_mst_youkai_strong_skill_level, mostly 効果度 %) and non-attack skills not scaled (on purpose for now).
 1. Endpoints whose layout is in `docs/PROTOCOL.md` but not implemented: `recvEventReward(All)`, `getEventRanking`, `gameStartEvent` /
    `gameEndEvent` / `gameContinueEvent`, `gameContinueScoreAttack`, `resultScoreAttack`,
    `executeContinueGacha`, `getGachaResult`, `presentHitodama`, `onedariHitodama`.

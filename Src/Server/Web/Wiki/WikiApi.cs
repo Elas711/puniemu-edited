@@ -87,7 +87,9 @@ namespace Puniemu.Src.Server.Web.Wiki
                     .ToList();
                 await Json(ctx, new
                 {
-                    id = y.Id, name = y.Name, rank = y.Rank, tribe = y.Tribe, food = y.Food, img = y.Image,
+                    id = y.Id, name = y.Name, rank = y.Rank,
+                    originalRank = long.TryParse(y.Id, out var nid) ? Puniemu.Src.Server.Balance.BalanceManager.RankOf(nid) : 0,
+                    tribe = y.Tribe, food = y.Food, img = y.Image,
                     maxLevel = y.MaxLevel, baseHp = y.BaseHp, maxHp = y.MaxHp, baseAtk = y.BaseAtk, maxAtk = y.MaxAtk,
                     description = y.Description, skillName = y.SkillName, skillText = y.SkillText, bonus = y.Bonus,
                     evolvesTo = y.EvolvesTo.Length > 0 && w.YokaiById.TryGetValue(y.EvolvesTo, out var e) ? new { id = e.Id, name = e.Name, level = y.EvolveLevel } : null,
