@@ -63,15 +63,15 @@ The real pools of the coin machines come from the official odds pages, see
 ## Finding more sites: `Tools/discover_sites.py`
 
 ```
-python -I Tools/discover_sites.py --out sites_found               # search APIs + crawler
-python -I Tools/discover_sites.py --out sites_found --no-crawl    # search APIs only (~2 min)
-python -I Tools/discover_sites.py --out sites_found --seed https://example.com/page
+python -I Tools/discover_sites.py --out sites_found                      # search APIs + crawler
+python -I Tools/discover_sites.py --out sites_found --hours 4 --max-pages 100000 --per-host 40
+python -I Tools/discover_sites.py --out sites_found --no-crawl           # search APIs only
 ```
 
-Searches the keyless public APIs (archive.org, GitHub / GitLab / Codeberg, Wikipedia in 7 languages
-and their external links, Wikimedia Commons, Fandom wikis, Hacker News, StackExchange), then crawls
-from the results (robots.txt respected, 1.5 s between requests per host, HTML only) and keeps pages
-whose text is about Puni Puni / Wibble Wobble. Runs merge into `sites_found/sites.json` and
-`sites_found/SITES.md` (by category). `GITHUB_TOKEN` raises the GitHub limit.
-Not used: result pages of search engines and sites behind bot checks or logins (Reddit, X, Discord);
-file hosts are never followed or listed.
+Keyless search APIs (archive.org, GitHub / GitLab / Codeberg, Wikipedia in 7 languages and their
+external links, Commons, Fandom, Hacker News, StackExchange), plus Reddit / YouTube / Brave / Google
+through their official APIs when their keys are set (see the tool's help). Then a crawler
+(robots.txt, 1.5 s per host, HTML only) keeps pages about the game. Links to file hosts and
+downloads found on those pages are listed (with the page) in `files.json` / SITES.md, never
+downloaded. Runs merge; `frontier.json` lets the next run continue. Bot checks, logins and
+robots.txt bans are not worked around.
