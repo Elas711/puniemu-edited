@@ -423,6 +423,11 @@ class Program
         {
             await InitCollectMenuHandler.HandleAsync(ctx);
         });
+        // the client refreshes the collection screen with the same answer (as in WibWobPS/wwps)
+        app.MapPost("/updateCollectMenu.nhn", async ctx =>
+        {
+            await InitCollectMenuHandler.HandleAsync(ctx);
+        });
         app.MapPost("/useAddition.nhn", async ctx =>
         {
             await UseAdditionHandler.HandleAsync(ctx);

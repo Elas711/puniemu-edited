@@ -15,6 +15,19 @@ namespace Puniemu.Src.Utils.GeneralUtils
 
         // Picks the save a request is about: the one the client named, if the device owns it,
         // otherwise the device's first save.
+        // The saves a request may use: the device's saves, or - when the device is unknown (lost
+        // device row, request without deviceId) - the save the request names, if it exists.
+        // Without this the menus fell back to a placeholder player ("superog").
+        public static async Task<List<string>> SavesForRequestAsync(string? deviceId, string? level5UserId)
+        {
+            var gdkeys = string.IsNullOrEmpty(deviceId) ? new List<string>()
+                : await UserDataManager.Logic.UserDataManager.GetGdkeysFromUdkeyAsync(deviceId);
+            if ((gdkeys == null || gdkeys.Count == 0) && !string.IsNullOrEmpty(level5UserId)
+                && await UserDataManager.Logic.UserDataManager.GetAccountFromGdkeyAsync(level5UserId) != null)
+                return new List<string> { level5UserId };
+            return gdkeys ?? new List<string>();
+        }
+
         public static string PickSave(List<string> gdkeys, string? preferred)
         {
             if (!string.IsNullOrEmpty(preferred) && gdkeys.Contains(preferred)) return preferred;

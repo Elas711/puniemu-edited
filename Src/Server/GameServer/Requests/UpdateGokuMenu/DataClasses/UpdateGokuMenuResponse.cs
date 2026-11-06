@@ -92,9 +92,9 @@ namespace Puniemu.Src.Server.GameServer.Requests.UpdateGokuMenu.DataClasses
 
             try
             {
-                if (!string.IsNullOrEmpty(request?.DeviceId))
+                if (request != null)
                 {
-                    var gdkeys = await Puniemu.Src.UserDataManager.Logic.UserDataManager.GetGdkeysFromUdkeyAsync(request.DeviceId);
+                    var gdkeys = await Puniemu.Src.Utils.GeneralUtils.GeneralUtils.SavesForRequestAsync(request.DeviceId, request.Level5UserId);
                     if (gdkeys != null && gdkeys.Count > 0)
                     {
                         var tables = (await Puniemu.Src.UserDataManager.Logic.UserDataManager.GetEntireUserData(Puniemu.Src.Utils.GeneralUtils.GeneralUtils.PickSave(gdkeys, request?.Level5UserId)))!;
@@ -131,9 +131,9 @@ namespace Puniemu.Src.Server.GameServer.Requests.UpdateGokuMenu.DataClasses
 
             try
             {
-                if (!string.IsNullOrEmpty(request?.DeviceId))
+                if (request != null)
                 {
-                    var gdkeys = await Puniemu.Src.UserDataManager.Logic.UserDataManager.GetGdkeysFromUdkeyAsync(request.DeviceId);
+                    var gdkeys = await Puniemu.Src.Utils.GeneralUtils.GeneralUtils.SavesForRequestAsync(request.DeviceId, request.Level5UserId);
                     if (gdkeys != null && gdkeys.Count > 0)
                     {
                         var tables = await Puniemu.Src.UserDataManager.Logic.UserDataManager.GetEntireUserData(Puniemu.Src.Utils.GeneralUtils.GeneralUtils.PickSave(gdkeys, request?.Level5UserId));
@@ -175,9 +175,9 @@ namespace Puniemu.Src.Server.GameServer.Requests.UpdateGokuMenu.DataClasses
 
             try
             {
-                if (!string.IsNullOrEmpty(request?.DeviceId))
+                if (request != null)
                 {
-                    var gdkeys = await Puniemu.Src.UserDataManager.Logic.UserDataManager.GetGdkeysFromUdkeyAsync(request.DeviceId);
+                    var gdkeys = await Puniemu.Src.Utils.GeneralUtils.GeneralUtils.SavesForRequestAsync(request.DeviceId, request.Level5UserId);
                     if (gdkeys != null && gdkeys.Count > 0)
                     {
                         var tables = await Puniemu.Src.UserDataManager.Logic.UserDataManager.GetEntireUserData(Puniemu.Src.Utils.GeneralUtils.GeneralUtils.PickSave(gdkeys, request?.Level5UserId));

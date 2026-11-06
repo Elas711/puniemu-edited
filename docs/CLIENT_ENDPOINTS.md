@@ -184,7 +184,7 @@ Legend: **yes** implemented, *ok* acknowledged (success answer, nothing stored),
 | `storeReview.nhn` | *ok* |
 | `top.nhn` |  |
 | `updateCampaignInfo.nhn` | *ok* |
-| `updateCollectMenu.nhn` |  |
+| `updateCollectMenu.nhn` | **yes** |
 | `updateCrystalMenu.nhn` | **yes** |
 | `updateGokuMenu.nhn` | **yes** |
 | `updateGokuStory.nhn` | **yes** |
