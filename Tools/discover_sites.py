@@ -11,7 +11,8 @@ How it works
   1. Public search APIs that need no key: archive.org, GitHub / GitLab / Codeberg repositories,
      Wikipedia (several languages) and Wikimedia Commons, Fandom wikis, Hacker News, StackExchange.
      Set GITHUB_TOKEN for more GitHub results (unauthenticated: 10 searches per minute).
-  2. Official APIs of sites that block crawlers, used only when you set your own keys:
+  2. Official APIs of sites that block crawlers, used only when you set your own keys (in a cloud
+     session whose proxy adds a saved key, set the variable to any placeholder, e.g. "proxy"):
        Reddit        REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET  (a "script" app, reddit.com/prefs/apps)
        YouTube       YOUTUBE_API_KEY                           (YouTube Data API v3)
        Web search    BRAVE_API_KEY, or GOOGLE_API_KEY + GOOGLE_CSE_ID (Programmable Search)
@@ -466,13 +467,14 @@ def src_youtube(f, cat):
     if not key:
         print("  skipped (set YOUTUBE_API_KEY)")
         return
+    gh = {"X-goog-api-key": key}  # a header, not ?key=: keys stay out of URLs and logs
     for term in ["妖怪ウォッチぷにぷに", "Yo-kai Watch Puni Puni", "Yokai Watch Wibble Wobble", "puni puni private server"]:
         token = ""
         for _ in range(3):
-            j = f.json(f"https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=50&q={q(term)}&key={key}{token}")
+            j = f.json(f"https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=50&q={q(term)}{token}", headers=gh)
             ids = [it["id"]["videoId"] for it in (j or {}).get("items", []) if it.get("id", {}).get("videoId")]
             if ids:
-                v = f.json(f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={','.join(ids)}&key={key}")
+                v = f.json(f"https://www.googleapis.com/youtube/v3/videos?part=snippet&id={','.join(ids)}", headers=gh)
                 for it in (v or {}).get("items", []):
                     sn = it["snippet"]
                     if relevance(f"{sn.get('title', '')} {sn.get('description', '')} {' '.join(sn.get('tags') or [])}"):
@@ -508,7 +510,7 @@ def src_websearch(f, cat):
                     break
         if gkey and gcx:
             for start in range(1, 92, 10):
-                j = f.json(f"https://www.googleapis.com/customsearch/v1?key={gkey}&cx={gcx}&q={q(term)}&num=10&start={start}")
+                j = f.json(f"https://www.googleapis.com/customsearch/v1?cx={gcx}&q={q(term)}&num=10&start={start}", headers={"X-goog-api-key": gkey})
                 items = (j or {}).get("items", [])
                 for r in items:
                     if is_file_link(r["link"]):
