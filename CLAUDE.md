@@ -4,7 +4,8 @@ Read this first; it replaces rediscovering the project. Keep it short and curren
 
 ## What this is
 Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni Puni (JP, client
-4.177.0) and Wibble Wobble. PostgreSQL (Npgsql) stores saves. Game data (`Resources/`,
+4.177.0) and Wibble Wobble. Saves: SQLite file (default, `Database=sqlite`, `SqlitePath`) or PostgreSQL
+(`Database=postgres`); all SQL is in `Src/UserDataManager/Logic/SaveStore.cs`. Game data (`Resources/`,
 `dataDownload/`, APKs, dumps, generated translations of game text) is **never committed**.
 
 ## Build / run / test
@@ -12,7 +13,7 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
 * Config: `appsettings.json` (template `appsettings.example.json`) or env vars
   (`PUNIEMU_RESOURCES_PATH`, `PostgresConnectionString`, `IsWibWob=false`, `GameVersion=4.177.0`,
   `Language=en`, `AdminToken`, `DataDownloadPath`, `TranslationsPath`, `EventsPath`,
-  `ASPNETCORE_URLS`). PostgreSQL must be running (`service postgresql start` in containers).
+  `ASPNETCORE_URLS`). With `Database=postgres`, PostgreSQL must be running (`service postgresql start` in containers).
 * Smoke test against a running server: `python Tools/test_server.py --url http://127.0.0.1:5000 --admin-token <t> --jp`
   (new account, battles, all main screens, gacha pull, web APIs; exit 1 on failure). Run it after every change.
 * Client protocol: AES-ECB, key `a865d7e5e2458f8ce1b5ecd087e54594`, SHA1 digest salt `0bk2kvtFE2`,

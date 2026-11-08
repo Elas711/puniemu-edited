@@ -28,14 +28,21 @@ Game data (`Resources`, `dataDownload`) and APKs are **not** part of this reposi
 ### Requirements
 
 * [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-* [PostgreSQL](https://www.postgresql.org/download/) (any recent version)
+* Optional: [PostgreSQL](https://www.postgresql.org/download/) - without it, saves go into one
+  SQLite file next to the server (nothing to install)
 * The game's server data: a `Resources` folder (master tables) and optionally the `dataDownload`
   folder (assets)
 
 ### 1. Database
 
-Create an empty database, e.g. `puniemu`. The tables are created automatically on the first start
-(you can also run `Database/schema.sql` yourself).
+Nothing to do with the default `"Database": "sqlite"`: all saves go into one file (`SqlitePath`,
+default `saves.db` next to the server), created on the first start. Back it up by copying
+`saves.db` (and `saves.db-wal` if it exists) while the server is stopped.
+
+For many players use PostgreSQL instead: create an empty database (e.g. `puniemu`), set
+`"Database": "postgres"` and `PostgresConnectionString`. The tables are created automatically
+(you can also run `Database/schema.sql` yourself). A config with a connection string and no
+`Database` key keeps using PostgreSQL.
 
 ### 2. Configuration
 
@@ -43,7 +50,7 @@ Copy `appsettings.example.json` to `appsettings.json` and fill in at least:
 
 ```json
 {
-  "PostgresConnectionString": "Host=localhost;Database=puniemu;Username=postgres;Password=CHANGEME",
+  "Database": "sqlite",
   "IsWibWob": false,
   "GameVersion": "4.0.6",
   "PublicServerURL": "http://192.168.1.100:8080",
@@ -381,11 +388,13 @@ empty, it defaults to `PublicServerURL + /dataDownload/`.
 
 ## Configuration
 
-All keys are optional except `PostgresConnectionString` and `IsWibWob`.
+All keys are optional except `IsWibWob` (and `PostgresConnectionString` with `"Database": "postgres"`).
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `PostgresConnectionString` | - | Npgsql connection string |
+| `Database` | `sqlite` | `sqlite` (one file) or `postgres`; `postgres` when only a connection string is set |
+| `SqlitePath` | `saves.db` | the SQLite save file (relative to the server folder) |
+| `PostgresConnectionString` | - | Npgsql connection string (for `postgres`) |
 | `IsWibWob` | - | `true` for Wibble Wobble, `false` for Puni Puni |
 | `GameVersion` | - | client version that may connect |
 | `StrictVersionCheck` | `true` | `false` accepts any client version |

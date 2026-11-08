@@ -1,7 +1,5 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using Npgsql;
-using NpgsqlTypes;
 using Puniemu.Src.Server.GameServer.DataClasses;
 using Puniemu.Src.UserDataManager.DataClasses;
 using System.Collections.Concurrent;
@@ -22,7 +20,8 @@ namespace Puniemu.Src.UserDataManager.Logic
             public ServerFullException() : base() { }
         }
 
-        private static NpgsqlDataSource? _dataSource;
+        private static ISaveStore? _store;
+        public static string StoreName => _store?.Name ?? "-";
 
         private static ConcurrentDictionary<string, Account> _accountCache = new();
 
@@ -39,52 +38,35 @@ namespace Puniemu.Src.UserDataManager.Logic
 
         private static SemaphoreSlim GetDeviceLock(string udkey) => _deviceLocks.GetOrAdd(udkey, _ => new SemaphoreSlim(1, 1));
 
-        // connect to postgres
+        // Opens the save store: SQLite (one file, default when no PostgreSQL connection string is set)
+        // or PostgreSQL ("Database" in appsettings.json).
         public static void Initialize()
         {
+            var dm = DataManager.Logic.DataManager.Database;
             try
             {
-                if (string.IsNullOrWhiteSpace(DataManager.Logic.DataManager.PostgresConnectionString))
-                    throw new InvalidOperationException("'PostgresConnectionString' is missing from appsettings.json");
-                _dataSource = NpgsqlDataSource.Create(DataManager.Logic.DataManager.PostgresConnectionString!);
-                EnsureSchema();
+                if (dm == "postgres")
+                {
+                    if (string.IsNullOrWhiteSpace(DataManager.Logic.DataManager.PostgresConnectionString))
+                        throw new InvalidOperationException("'PostgresConnectionString' is missing from appsettings.json");
+                    _store = new PostgresSaveStore(DataManager.Logic.DataManager.PostgresConnectionString!);
+                }
+                else
+                    _store = new SqliteSaveStore(DataManager.Logic.DataManager.ResolvePath(DataManager.Logic.DataManager.SqlitePath));
+                _store.EnsureSchema();
 
                 _flushTimer = new PeriodicTimer(TimeSpan.FromSeconds(60));
                 _flushTask = FlushLoopAsync(_cts.Token);
-                Console.WriteLine("db service started");
+                Console.WriteLine($"db service started: {_store.Name}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Couldn't connect to PostgreSQL: {ex.Message}");
-                Console.WriteLine("Check 'PostgresConnectionString' in appsettings.json and that the database server is running.");
+                Console.WriteLine($"Couldn't open the save database ({dm}): {ex.Message}");
+                Console.WriteLine(dm == "postgres"
+                    ? "Check 'PostgresConnectionString' in appsettings.json and that the database server is running."
+                    : "Check 'SqlitePath' in appsettings.json (the folder must be writable).");
                 Environment.Exit(1);
             }
-        }
-
-        // Creates the tables when they don't exist yet, so a fresh database works without running
-        // schema.sql by hand. Existing databases are left untouched.
-        private static void EnsureSchema()
-        {
-            using var cmd = _dataSource!.CreateCommand(@"
-create table if not exists public.account (
-  gdkey text primary key,
-  ywp_user_tables jsonb,
-  last_lgn_time text,
-  opening_tutorial_flag boolean,
-  start_date text,
-  character_id text unique,
-  user_id text unique,
-  udkey text
-);
-create table if not exists public.device (
-  udkey text primary key,
-  gdkeys text[] not null
-);
-create table if not exists public.mail (
-  mail text primary key,
-  ""currentUdkey"" text
-);");
-            cmd.ExecuteNonQuery();
         }
 
         // Accounts that were not touched for this long and have nothing left to save are dropped from the cache.
@@ -179,14 +161,9 @@ create table if not exists public.mail (
 
                 ThrowIfCacheFull();
 
-                await using var cmd = _dataSource!.CreateCommand(
-                    "SELECT gdkey, character_id, udkey, user_id, ywp_user_tables, last_lgn_time, start_date, opening_tutorial_flag FROM account WHERE gdkey = @gdkey");
-                cmd.Parameters.AddWithValue("gdkey", gdkey);
-                await using var reader = await cmd.ExecuteReaderAsync();
-                Account? account = null;
-                if (await reader.ReadAsync())
+                var account = await _store!.LoadAccountAsync(gdkey);
+                if (account != null)
                 {
-                    account = ReadAccount(reader);
                     account.YwpUserTables ??= new();
                     account.LastAccessUtc = DateTime.UtcNow;
                     _accountCache[gdkey] = account;
@@ -202,22 +179,11 @@ create table if not exists public.mail (
         public static async Task<string> NewDeviceAsync(string? udkey = null)
         {
             udkey ??= Guid.NewGuid().ToString();
-            await using var cmd = _dataSource!.CreateCommand(
-                "INSERT INTO device (udkey, gdkeys) VALUES (@udkey, @gdkeys) RETURNING udkey");
-            cmd.Parameters.AddWithValue("udkey", udkey);
-            cmd.Parameters.AddWithValue("gdkeys", new List<string>());
-            var newUdkey = (string)(await cmd.ExecuteScalarAsync())!;
-            return newUdkey;
+            return await _store!.NewDeviceAsync(udkey);
         }
 
         // checks if udkey exists
-        public static async Task<bool> IsDeviceExists(string udkey)
-        {
-            await using var cmd = _dataSource!.CreateCommand("SELECT COUNT(*) FROM device WHERE udkey = @udkey");
-            cmd.Parameters.AddWithValue("udkey", udkey);
-            var count = (long)(await cmd.ExecuteScalarAsync())!;
-            return count > 0;
-        }
+        public static async Task<bool> IsDeviceExists(string udkey) => await _store!.DeviceExistsAsync(udkey);
 
         private static void ThrowIfCacheFull()
         {
@@ -245,17 +211,13 @@ create table if not exists public.mail (
                     UserId = System.IO.Hashing.Crc32.HashToUInt32(System.Text.Encoding.UTF8.GetBytes(fc)).ToString(),
                     LastAccessUtc = DateTime.UtcNow
                 };
-                await using var cmd = _dataSource!.CreateCommand(
-                    "INSERT INTO account (gdkey, character_id, udkey, user_id, ywp_user_tables, last_lgn_time, start_date, opening_tutorial_flag) " +
-                    "VALUES (@gdkey, @character_id, @udkey, @user_id, @ywp_user_tables, @last_lgn_time, @start_date, @opening_tutorial_flag)");
-                AddAccountParameters(cmd, acc);
                 try
                 {
-                    await cmd.ExecuteNonQueryAsync();
+                    await _store!.InsertAccountAsync(acc);
                     break;
                 }
                 // friend code / user id are unique and the user id is a 32-bit hash: on a clash draw again
-                catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation && attempt < 8) { }
+                catch (DuplicateSaveKeyException) when (attempt < 8) { }
             }
 
             // Immediately cache the new account
@@ -349,9 +311,7 @@ create table if not exists public.mail (
             await accountLock.WaitAsync();
             try
             {
-                await using var cmd = _dataSource!.CreateCommand("DELETE FROM account WHERE gdkey = @gdkey");
-                cmd.Parameters.AddWithValue("gdkey", gdkey);
-                await cmd.ExecuteNonQueryAsync();
+                await _store!.DeleteAccountAsync(gdkey);
 
                 _accountCache.TryRemove(gdkey, out _);
             }
@@ -368,11 +328,7 @@ create table if not exists public.mail (
             await deviceLock.WaitAsync();
             try
             {
-                await using var cmd = _dataSource!.CreateCommand(
-                    "UPDATE device SET gdkeys = array_remove(gdkeys, @gdkey) WHERE udkey = @udkey");
-                cmd.Parameters.AddWithValue("gdkey", gdkey);
-                cmd.Parameters.AddWithValue("udkey", udkey);
-                await cmd.ExecuteNonQueryAsync();
+                await _store!.RemoveGdkeyFromDeviceAsync(udkey, gdkey);
             }
             finally
             {
@@ -436,10 +392,7 @@ create table if not exists public.mail (
 
         public static async Task<string> GetGdkeyFromCharacterId(string charId)
         {
-            await using var cmd = _dataSource!.CreateCommand("SELECT gdkey FROM account WHERE character_id = @character_id");
-            cmd.Parameters.AddWithValue("character_id", charId);
-            var gdkey = await cmd.ExecuteScalarAsync() as string;
-            return gdkey ?? string.Empty;
+            return await _store!.GdkeyByCharacterIdAsync(charId);
         }
 
         public static async Task TransferGdkeys(string udkeyFrom, string udkeyTo)
@@ -457,31 +410,8 @@ create table if not exists public.mail (
                 if (secondKey != firstKey) await secondLock.WaitAsync();
                 try
                 {
-                    // Both updates happen in one transaction so a crash can't leave the transfer half-applied
-                    await using var conn = await _dataSource!.OpenConnectionAsync();
-                    await using var tx = await conn.BeginTransactionAsync();
-
-                    var fromGdkeys = await GetDeviceGdkeysAsync(udkeyFrom, conn, tx);
-                    var toGdkeys = await GetDeviceGdkeysAsync(udkeyTo, conn, tx);
-
-                    if (fromGdkeys == null)
-                        throw new Exception($"Device {udkeyFrom} not found");
-
-                    if (toGdkeys == null)
-                        throw new Exception($"Device {udkeyTo} not found");
-
-                    var newToGdkeys = new List<string>();
-
-                    foreach (var gdkey in fromGdkeys)
-                    {
-                        if (!newToGdkeys.Contains(gdkey))
-                            newToGdkeys.Add(gdkey);
-                    }
-
-                    await SetDeviceGdkeysAsync(udkeyTo, newToGdkeys, conn, tx);
-                    await SetDeviceGdkeysAsync(udkeyFrom, new List<string>(), conn, tx);
-
-                    await tx.CommitAsync();
+                    // both updates happen in one transaction so a crash can't leave the transfer half-applied
+                    await _store!.TransferGdkeysAsync(udkeyFrom, udkeyTo);
                 }
                 finally
                 {
@@ -493,36 +423,13 @@ create table if not exists public.mail (
                 firstLock.Release();
             }
         }
-        public static async Task<Mail> GetDataByMail(string email)
-        {
-            await using var cmd = _dataSource!.CreateCommand("SELECT mail, \"currentUdkey\" FROM mail WHERE mail = @mail");
-            cmd.Parameters.AddWithValue("mail", email);
-            await using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                return new Mail
-                {
-                    MailAddress = reader.GetString(0),
-                    CurrentUdkey = reader.IsDBNull(1) ? null : reader.GetString(1)
-                };
-            }
-            return null!;
-        }
-        public static async Task AddOrEditEmail(string email, string udkey)
-        {
-            await using var cmd = _dataSource!.CreateCommand(
-                "INSERT INTO mail (mail, \"currentUdkey\") VALUES (@mail, @udkey) " +
-                "ON CONFLICT (mail) DO UPDATE SET \"currentUdkey\" = EXCLUDED.\"currentUdkey\"");
-            cmd.Parameters.AddWithValue("mail", email);
-            cmd.Parameters.AddWithValue("udkey", udkey);
-            await cmd.ExecuteNonQueryAsync();
-        }
+        public static async Task<Mail> GetDataByMail(string email) => (await _store!.GetMailAsync(email))!;
+
+        public static async Task AddOrEditEmail(string email, string udkey) => await _store!.UpsertMailAsync(email, udkey);
+
         public static async Task<string> GetGdkeyFromUserId(string userId)
         {
-            await using var cmd = _dataSource!.CreateCommand("SELECT gdkey FROM account WHERE user_id = @user_id");
-            cmd.Parameters.AddWithValue("user_id", userId);
-            var gdkey = await cmd.ExecuteScalarAsync() as string;
-            return gdkey ?? string.Empty;
+            return await _store!.GdkeyByUserIdAsync(userId);
         }
 
         public static async Task<string> GetLastLoginTime(string gdkey)
@@ -569,11 +476,7 @@ create table if not exists public.mail (
             await deviceLock.WaitAsync();
             try
             {
-                await using var cmd = _dataSource!.CreateCommand(
-                    "UPDATE device SET gdkeys = array_append(gdkeys, @gdkey) WHERE udkey = @udkey");
-                cmd.Parameters.AddWithValue("gdkey", gdkey);
-                cmd.Parameters.AddWithValue("udkey", udkey);
-                await cmd.ExecuteNonQueryAsync();
+                await _store!.AddGdkeyToDeviceAsync(udkey, gdkey);
             }
             finally
             {
@@ -603,28 +506,9 @@ create table if not exists public.mail (
         public static async Task<List<AccountSummary>> SearchAccountsAsync(string query, int limit)
         {
             limit = Math.Clamp(limit, 1, 200);
-            await using var cmd = _dataSource!.CreateCommand(
-                "SELECT gdkey, character_id, user_id, last_lgn_time, ywp_user_tables->'ywp_user_data'->>'playerName' FROM account " +
-                "WHERE @q = '' OR gdkey = @q OR character_id ILIKE @like OR user_id = @q OR (ywp_user_tables->'ywp_user_data'->>'playerName') ILIKE @like " +
-                "ORDER BY last_lgn_time DESC NULLS LAST LIMIT @limit");
             var q = (query ?? "").Trim();
-            cmd.Parameters.AddWithValue("q", q);
-            cmd.Parameters.AddWithValue("like", "%" + q.Replace("%", "\\%").Replace("_", "\\_") + "%");
-            cmd.Parameters.AddWithValue("limit", limit);
-            var list = new List<AccountSummary>();
-            await using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                list.Add(new AccountSummary
-                {
-                    Gdkey = reader.GetString(0),
-                    CharacterId = reader.IsDBNull(1) ? null : reader.GetString(1),
-                    UserId = reader.IsDBNull(2) ? null : reader.GetString(2),
-                    LastLoginTime = reader.IsDBNull(3) ? null : reader.GetString(3),
-                    PlayerName = reader.IsDBNull(4) ? null : reader.GetString(4),
-                    Online = _accountCache.ContainsKey(reader.GetString(0))
-                });
-            }
+            var list = await _store!.SearchAccountsAsync(q, limit);
+            foreach (var a in list) a.Online = _accountCache.ContainsKey(a.Gdkey);
             // Names in the cache may be newer than the database copy.
             foreach (var a in list)
             {
@@ -640,10 +524,9 @@ create table if not exists public.mail (
         public static async Task<Dictionary<string, long>> GetStatsAsync()
         {
             var stats = new Dictionary<string, long>();
-            await using (var cmd = _dataSource!.CreateCommand("SELECT COUNT(*) FROM account"))
-                stats["accounts"] = (long)(await cmd.ExecuteScalarAsync())!;
-            await using (var cmd = _dataSource!.CreateCommand("SELECT COUNT(*) FROM device"))
-                stats["devices"] = (long)(await cmd.ExecuteScalarAsync())!;
+            var (accounts, devices) = await _store!.CountsAsync();
+            stats["accounts"] = accounts;
+            stats["devices"] = devices;
             stats["cachedAccounts"] = _accountCache.Count;
             stats["dirtyAccounts"] = _accountCache.Values.Count(x => x.IsDirty);
             return stats;
@@ -652,11 +535,7 @@ create table if not exists public.mail (
         // Every gdkey in the database (used for server-wide gifts).
         public static async Task<List<string>> GetAllGdkeysAsync()
         {
-            var list = new List<string>();
-            await using var cmd = _dataSource!.CreateCommand("SELECT gdkey FROM account");
-            await using var reader = await cmd.ExecuteReaderAsync();
-            while (await reader.ReadAsync()) list.Add(reader.GetString(0));
-            return list;
+            return await _store!.AllGdkeysAsync();
         }
 
         // Forces every changed account to be written to the database now.
@@ -677,71 +556,9 @@ create table if not exists public.mail (
             }
         }
 
-        private static async Task UpdateAccountNoLockAsync(Account account)
-        {
-            await using var cmd = _dataSource!.CreateCommand(
-                "UPDATE account SET character_id = @character_id, udkey = @udkey, user_id = @user_id, ywp_user_tables = @ywp_user_tables, " +
-                "last_lgn_time = @last_lgn_time, start_date = @start_date, opening_tutorial_flag = @opening_tutorial_flag WHERE gdkey = @gdkey");
-            AddAccountParameters(cmd, account);
-            await cmd.ExecuteNonQueryAsync();
-        }
+        private static async Task UpdateAccountNoLockAsync(Account account) => await _store!.UpdateAccountAsync(account);
 
-        private static void AddAccountParameters(NpgsqlCommand cmd, Account account)
-        {
-            cmd.Parameters.AddWithValue("gdkey", account.Gdkey!);
-            cmd.Parameters.AddWithValue("character_id", (object?)account.CharacterId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("udkey", (object?)account.Udkey ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("user_id", (object?)account.UserId ?? DBNull.Value);
-            cmd.Parameters.Add(new NpgsqlParameter("ywp_user_tables", NpgsqlDbType.Jsonb)
-            {
-                Value = account.YwpUserTables != null ? JsonConvert.SerializeObject(account.YwpUserTables) : DBNull.Value
-            });
-            cmd.Parameters.AddWithValue("last_lgn_time", (object?)account.LastLoginTime ?? DBNull.Value);
-            // start_date is a text column in the schema
-            cmd.Parameters.AddWithValue("start_date", account.StartDate.ToString());
-            cmd.Parameters.AddWithValue("opening_tutorial_flag", account.OpeningTutorialFlag);
-        }
-
-        private static Account ReadAccount(NpgsqlDataReader reader)
-        {
-            var tablesJson = reader.IsDBNull(4) ? null : reader.GetString(4);
-            var startDateText = reader.IsDBNull(6) ? null : reader.GetString(6);
-            return new Account
-            {
-                Gdkey = reader.GetString(0),
-                CharacterId = reader.IsDBNull(1) ? null : reader.GetString(1),
-                Udkey = reader.IsDBNull(2) ? null : reader.GetString(2),
-                UserId = reader.IsDBNull(3) ? null : reader.GetString(3),
-                YwpUserTables = tablesJson != null ? JsonConvert.DeserializeObject<Dictionary<string, object?>>(tablesJson) : null,
-                LastLoginTime = reader.IsDBNull(5) ? null : reader.GetString(5),
-                StartDate = long.TryParse(startDateText, out var startDate) ? startDate : 0,
-                OpeningTutorialFlag = !reader.IsDBNull(7) && reader.GetBoolean(7)
-            };
-        }
-
-        // Returns null if the device doesn't exist. Pass conn/tx to run inside an existing transaction.
-        private static async Task<List<string>?> GetDeviceGdkeysAsync(string udkey, NpgsqlConnection? conn = null, NpgsqlTransaction? tx = null)
-        {
-            await using var cmd = conn != null
-                ? new NpgsqlCommand("SELECT gdkeys FROM device WHERE udkey = @udkey", conn, tx)
-                : _dataSource!.CreateCommand("SELECT gdkeys FROM device WHERE udkey = @udkey");
-            cmd.Parameters.AddWithValue("udkey", udkey);
-            await using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                return reader.GetFieldValue<List<string>>(0);
-            }
-            return null;
-        }
-
-        private static async Task SetDeviceGdkeysAsync(string udkey, List<string> gdkeys, NpgsqlConnection? conn = null, NpgsqlTransaction? tx = null)
-        {
-            await using var cmd = conn != null
-                ? new NpgsqlCommand("UPDATE device SET gdkeys = @gdkeys WHERE udkey = @udkey", conn, tx)
-                : _dataSource!.CreateCommand("UPDATE device SET gdkeys = @gdkeys WHERE udkey = @udkey");
-            cmd.Parameters.AddWithValue("gdkeys", gdkeys);
-            cmd.Parameters.AddWithValue("udkey", udkey);
-            await cmd.ExecuteNonQueryAsync();
-        }
+        // Returns null if the device doesn't exist.
+        private static async Task<List<string>?> GetDeviceGdkeysAsync(string udkey) => await _store!.DeviceGdkeysAsync(udkey);
     }
 }

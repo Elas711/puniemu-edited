@@ -440,3 +440,7 @@ test_account.json
 
 # Tools/discover_sites.py output
 sites_found/
+
+# SQLite saves (Database=sqlite)
+saves.db
+saves.db-*

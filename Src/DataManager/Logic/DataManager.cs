@@ -11,6 +11,10 @@ namespace Puniemu.Src.DataManager.Logic
         public static string? SupabaseURL { get; private set; }
 
         public static string? PostgresConnectionString { get; private set; }
+        // "sqlite" (saves in one file, SqlitePath) or "postgres"; default: postgres when a connection
+        // string is set (existing set-ups), else sqlite
+        public static string Database { get; private set; } = "sqlite";
+        public static string SqlitePath { get; private set; } = "saves.db";
 
         // Kestrel cap on simultaneous open connections
         public static int MaxConnections { get; private set; }
@@ -106,6 +110,9 @@ namespace Puniemu.Src.DataManager.Logic
             SupabaseKey = config["SupabaseKey"];
             SupabaseURL = config["SupabaseURL"];
             PostgresConnectionString = config["PostgresConnectionString"];
+            Database = (config["Database"] ?? (string.IsNullOrWhiteSpace(PostgresConnectionString) ? "sqlite" : "postgres")).Trim().ToLowerInvariant();
+            if (Database is not ("sqlite" or "postgres")) Database = "sqlite";
+            SqlitePath = string.IsNullOrWhiteSpace(config["SqlitePath"]) ? SqlitePath : config["SqlitePath"]!;
             MaxConnections = int.TryParse(config["MaxConnections"], out var maxConnections) ? maxConnections : 1500;
             MaxCachedAccounts = int.TryParse(config["MaxCachedAccounts"], out var maxCachedAccounts) ? maxCachedAccounts : 2000;
             GameVersion = config["GameVersion"];
