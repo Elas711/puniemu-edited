@@ -105,6 +105,8 @@ python Tools/patch_apk.py "Yo-kai Watch Puni Puni.apks" --out patched \
 * Asset and web page addresses come from the server (`DataDownloadURL`, `PublicServerURL`), not from
   the APK: set both to the same address.
 * The tool also makes the game trust user CAs and allows HTTP, and re-signs every split.
+* `--xapk Puni.xapk` also packs the result into one `.xapk` (manifest.json + icon + splits) for XAPK
+  installers such as APKPure or BlueStacks (drag the file onto the window).
 
 Not tested on a device: which host names actually go through `https://%s.com/` (gameserver,
 level5-id...), whether the account strings named "dev" are the ones the release build uses, and

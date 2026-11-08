@@ -211,6 +211,62 @@ def replace_entries(src, dst, changes):
             zout.writestr(zi, body)
 
 
+def make_xapk(apk_dir, xapk_path, aapt2):
+    """Packs the signed split APKs into one .xapk (zip + manifest.json, as APKPure / XAPK installers read it)."""
+    import json
+    import re
+    apks = sorted(f for f in os.listdir(apk_dir) if f.endswith(".apk"))
+    info = {}
+    for f in apks:
+        out = subprocess.run([aapt2, "dump", "badging", os.path.join(apk_dir, f)], capture_output=True, text=True).stdout
+        split = re.search(r"split='([^']+)'", out.splitlines()[0] if out else "")
+        info[f] = (split.group(1) if split else "base", out)
+    base = next(f for f, (sid, _) in info.items() if sid == "base")
+    badging = info[base][1]
+    def field(pattern, default=""):
+        m = re.search(pattern, badging)
+        return m.group(1) if m else default
+    def clean_name(f):
+        sid = info[f][0]
+        return (field(r"package: name='([^']+)'") if sid == "base" else sid) + ".apk"
+    manifest = {
+        "xapk_version": 2,
+        "package_name": field(r"package: name='([^']+)'"),
+        "name": field(r"application-label:'([^']*)'", "app"),
+        "version_code": field(r"versionCode='([^']+)'"),
+        "version_name": field(r"versionName='([^']+)'"),
+        "min_sdk_version": field(r"minSdkVersion:'(\d+)'", "21"),
+        "target_sdk_version": field(r"targetSdkVersion:'(\d+)'", "34"),
+        "permissions": re.findall(r"uses-permission: name='([^']+)'", badging),
+        "split_configs": [info[f][0] for f in apks if info[f][0] != "base"],
+        "total_size": sum(os.path.getsize(os.path.join(apk_dir, f)) for f in apks),
+        "split_apks": [{"file": clean_name(f), "id": info[f][0]} for f in [base] + [f for f in apks if f != base]],
+    }
+    icon = None
+    with zipfile.ZipFile(os.path.join(apk_dir, base)) as z:
+        cands = sorted((i for i in z.infolist() if re.search(r"mipmap-x+hdpi[^/]*/ic_launcher\.(webp|png)$", i.filename)), key=lambda i: -i.file_size)
+        if cands:
+            raw = z.read(cands[0])
+            try:
+                import io
+                from PIL import Image
+                buf = io.BytesIO()
+                Image.open(io.BytesIO(raw)).convert("RGBA").save(buf, "PNG")
+                icon = buf.getvalue()
+            except Exception:  # noqa: BLE001 - no Pillow: an .xapk without icon still installs
+                icon = raw if cands[0].filename.endswith(".png") else None
+    if icon:
+        manifest["icon"] = "icon.png"
+    with zipfile.ZipFile(xapk_path, "w") as zx:
+        zx.writestr("manifest.json", json.dumps(manifest, ensure_ascii=False, indent=2), compress_type=zipfile.ZIP_DEFLATED)
+        if icon:
+            zx.writestr("icon.png", icon)
+        for entry in manifest["split_apks"]:
+            src = base if entry["id"] == "base" else next(f for f in apks if info[f][0] == entry["id"])
+            zx.write(os.path.join(apk_dir, src), entry["file"], compress_type=zipfile.ZIP_STORED)
+    print(f"{xapk_path}: {len(apks)} APKs, {manifest['package_name']} {manifest['version_name']}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("input", help=".apks / .xapk bundle, a base .apk, or a folder with the split APKs")
@@ -221,6 +277,7 @@ def main():
     ap.add_argument("--ks-alias")
     ap.add_argument("--ks-pass")
     ap.add_argument("--game-url", help="replace the game server address in libSGF.so (at most 15 characters, e.g. https://ab.de/)")
+    ap.add_argument("--xapk", help="also pack the result into one .xapk file (for XAPK installers / BlueStacks)")
     ap.add_argument("--account-url", help="replace the account server address in libSGF.so (at most 29 characters, e.g. http://192.168.1.50:8080)")
     a = ap.parse_args()
     work = tempfile.mkdtemp(prefix="puniapk_")
@@ -273,7 +330,12 @@ def main():
         if a.keystore:
             cmd += ["--ks", a.keystore, "--ksAlias", a.ks_alias or "", "--ksPass", a.ks_pass or ""]
         subprocess.run(cmd, check=True)
+        for f in os.listdir(a.out):
+            if f.endswith(".idsig"):
+                os.remove(os.path.join(a.out, f))  # v4 signature side files, not needed to install
         print(f"\nsigned APKs in {a.out}: adb install-multiple {a.out}/*.apk")
+        if a.xapk:
+            make_xapk(a.out, a.xapk, aapt2)
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
