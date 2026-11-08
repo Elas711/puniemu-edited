@@ -25,7 +25,7 @@ Admin area -> **Servers** -> **Create**:
 | Docker image | `.NET 8 (parkervcp yolks)` |
 | Allocation (port) | any free port, e.g. `8080`; **443** if the game should connect directly (see 6) |
 | Memory | 1.5-2 GB (measured: ~800 MB with the English translation and 75k asset files) |
-| Disk | 2 GB + the size of your `dataDownload` folder (often several GB) |
+| Disk | at least 4 GB (the build needs ~600 MB while installing, the data ~1.1 GB); + several GB with *Download assets* |
 | CPU | 100-200 % is plenty |
 
 Leave the variables at their defaults for now. The install starts by itself: the console shows the
@@ -124,6 +124,9 @@ Wibble Wobble clients: point the launching zone at `http://<node address>:<port>
 (docs/EMULATOR.md, "Wibble Wobble clients").
 
 ## Troubleshooting
+
+* **Install fails with `No space left on device`:** give the server more disk (see the table
+  above). Since this version the build runs inside the server folder, not in Wings' small `/tmp`.
 
 * **The panel shows "500 | Server Error" when opening the server (or the egg):** the first version
   of this egg had `"features": null` and no `tags`; Pelican expects lists there. Admin area ->
