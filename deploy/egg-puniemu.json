@@ -8,7 +8,12 @@
     "name": "Puniemu (Yo-kai Watch Puni Puni / Wibble Wobble)",
     "author": "puniemu@example.com",
     "description": "Private server emulator for Yo-kai Watch Puni Puni (JP 4.177.0) and Wibble Wobble. The install builds the server and sets up everything by itself: game data from the official servers, real crank-a-kai odds and a full English translation.",
-    "features": null,
+    "tags": [
+        "yokai-watch",
+        "game-server",
+        "dotnet"
+    ],
+    "features": [],
     "docker_images": {
         ".NET 8 (parkervcp yolks)": "ghcr.io/parkervcp/yolks:dotnet_8",
         "Debian (parkervcp yolks)": "ghcr.io/parkervcp/yolks:debian"

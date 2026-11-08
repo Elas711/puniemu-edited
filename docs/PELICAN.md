@@ -125,6 +125,13 @@ Wibble Wobble clients: point the launching zone at `http://<node address>:<port>
 
 ## Troubleshooting
 
+* **The panel shows "500 | Server Error" when opening the server (or the egg):** the first version
+  of this egg had `"features": null` and no `tags`; Pelican expects lists there. Admin area ->
+  Eggs -> Puniemu -> import / update it from the current `deploy/egg-puniemu.json` (or edit the
+  egg once and save it), then open the server again. If it still fails, the exact error is in the
+  panel's log on the panel machine: `tail -n 50 /var/www/pelican/storage/logs/laravel-$(date +%F).log`
+  (Pterodactyl: `/var/www/pterodactyl/storage/logs/`).
+
 * **Install fails at `git clone`:** wrong branch name, or a private repository without a token
   (Git token variable).
 * **Server stops right after start:** the console's last lines say why - usually an empty
