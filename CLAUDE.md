@@ -38,6 +38,8 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
   `Tools/fetch_gacha_rates.py`.
 * Web pages (in-game): wiki `Src/Server/Web/Wiki`, Event Guide, portal, secret words
   (`Src/Server/Web/SecretWords.cs`, `/web/scword.nhn`); admin `/admin`. Anti-cheat: `Infrastructure/AntiCheat.cs`.
+* Ready-made data: private repo Elas711/Puniemu-Data (`/home/user/puniemu-data` when attached):
+  Resources/, Translations/en/*.generated.json, dataDownload archive extras; the egg's DATA_REPO.
 * Game data download: `Puniemu --fetch-game-data` (`Infrastructure/GameDataFetcher.cs`: init+getMaster,
   assets from ywp_mst_version_resource); base Puniemu files from Washaaaan/puniemu2 `Resources/`.
 * Data sources / archives: `docs/ARCHIVES.md` (archive.org items, MediaFire packs,

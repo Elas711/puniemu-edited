@@ -32,9 +32,30 @@ Leave the variables at their defaults for now. The install starts by itself: the
 git clone, the build and the game data download (3-6 minutes, longer with assets) and ends with
 `Install complete.`
 
-## 3. Game data (automatic)
+## 3. Game data
 
-The install gets it by itself:
+### Easiest: your private data repository
+
+`Elas711/Puniemu-Data` (private) holds everything ready-made: the 4.177.0 master tables with the
+real crank-a-kai pools, the complete English translation (0 texts left in Japanese) and ~2,600 old
+asset files the official server no longer has. The egg uses it by default:
+
+1. GitHub -> Settings -> Developer settings -> **Personal access tokens -> Fine-grained tokens** ->
+   *Generate new token*: Repository access = only `Puniemu-Data`, Permissions -> Contents =
+   **Read-only**. Copy the token.
+2. Server -> Startup tab: **Git token** = the token (Data repository is already filled in).
+3. Settings tab -> **Reinstall server**. The install copies `Resources/`, `Translations/` and the
+   archive assets in place and skips the slow automatic steps below.
+
+Optional: **Download assets** = `true` also fetches the ~75,000 current asset files (several GB)
+from the official file server.
+
+Tested here: a fresh install from the data repository starts, translates all 173,690 texts (0 left
+in Japanese) and passes the smoke test.
+
+### Without a data repository (automatic)
+
+Empty **Data repository** and the install builds the data itself:
 
 1. **Base data** (`Base data repository`, default `Washaaaan/puniemu2`): Puniemu's own files
    (`stage_data`, `gacha_pool`, `mission_cfg`, ...) and a set of master tables, copied into
@@ -53,6 +74,11 @@ You can still upload your own data (Files tab or SFTP): `Resources/` for the mas
 `dataDownload/` for assets, generated translations (`machine*.json`) into `Translations/en/`. Big
 folders: upload a zip and use the file manager's **Unarchive**. To keep edited master tables, set
 `Download master tables` to `false`.
+
+4. **Crank-a-kai odds + translations** (`true`): the real crank-a-kai pools from the official odds
+   pages; with Language `en` the English dictionary from Wibble Wobble and (Machine translation =
+   `true`) an offline machine translation of every text that is left (1.1 GB model once, 10-30
+   minutes CPU).
 
 The same download works outside the panel:
 `Puniemu --fetch-game-data --version 4.177.0 --resources Resources [--assets dataDownload]`.
