@@ -217,6 +217,16 @@ class Program
         {
             await CreateGDKeyHandler.HandleAsync(ctx);
         });
+        // Puni Puni clients patched with Tools/patch_apk.py --account-url call these paths directly
+        // (the client's own strings: <host>/api/v1/active?apkey=..., /api/v1/create_gdkey?apkey=...)
+        app.MapGet(L5ID_BASE + "active", async ctx =>
+        {
+            await Puniemu.Src.Server.L5ID.Requests.Active.Logic.Puni.ActiveHandler.HandleAsync(ctx);
+        });
+        app.MapGet(L5ID_BASE + "create_gdkey", async ctx =>
+        {
+            await CreateGDKeyHandler.HandleAsync(ctx);
+        });
         //For WibWob
         app.MapGet(L5ID_BASE + "active.nhn/", async ctx =>
         {

@@ -80,6 +80,37 @@ Verified here: the four split APKs are signed with the same key (v1/v2/v3), zip-
 native libraries stay uncompressed and page-aligned, and only `res/xml/network_security_config.xml`
 differs from the original. Not verified: whether the game's protection accepts a re-signed APK.
 
+## Patched server address (no DNS redirect)
+
+`libSGF.so`'s code is encrypted, but its strings are plain text, so `Tools/patch_apk.py` can replace
+them in place (same position, not longer, zero-padded):
+
+| String in 4.177.0 | Used for | Room |
+|---|---|---|
+| `https://%s.com/` (offset 0x1d248b2) | the game server (`%s` = a host part filled in at runtime) | 15 characters |
+| `https://pf-api-dev.uniplay.jp/api/v1/active?apkey=`, `.../create_gdkey?apkey=` | the account server (device + save key) | base of up to 29 characters |
+
+```
+python Tools/patch_apk.py "Yo-kai Watch Puni Puni.apks" --out patched \
+       --game-url https://ab.de/ --account-url http://192.168.1.50:8080
+```
+
+* `--game-url` must fit in 15 characters including `http(s)://` and the final `/`, so it can't
+  carry a port: the server must answer on **80** (`http://`) or **443** (`https://`). Room for the
+  host: 7 characters with `http://`, 6 with `https://` - a short domain of your own (e.g. `ab.de`)
+  or a short IP (`1.2.3.4`). With a real domain and a Let's Encrypt certificate (`https://`) the
+  game trusts the server without installing a CA.
+* `--account-url` has room for an IP and port (Puniemu answers `/api/v1/active` and
+  `/api/v1/create_gdkey` for this).
+* Asset and web page addresses come from the server (`DataDownloadURL`, `PublicServerURL`), not from
+  the APK: set both to the same address.
+* The tool also makes the game trust user CAs and allows HTTP, and re-signs every split.
+
+Not tested on a device: which host names actually go through `https://%s.com/` (gameserver,
+level5-id...), whether the account strings named "dev" are the ones the release build uses, and
+whether the protector checks `libSGF.so`. If the patched game still contacts the official names, the
+DNS redirect above works with any address.
+
 ## Wibble Wobble clients
 
 Wibble Wobble reads its server from the NHN HSP launching config (`res/xml/hsp_launching_zone.xml`

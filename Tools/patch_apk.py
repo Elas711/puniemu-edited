@@ -15,6 +15,7 @@ and signs every split APK with one key (Android refuses splits with different si
 Everything else (code, the encrypted libSGF.so, assets) stays byte for byte the same.
 
   python Tools/patch_apk.py "Yo-kai Watch Puni Puni.apks" --out patched
+  ... --game-url https://ab.de/ --account-url http://192.168.1.50:8080   (server address in the game, see docs/EMULATOR.md)
   adb install-multiple patched/*.apk          (uninstall the store version first: other signature)
 
 Then install your CA as a user certificate on the phone (Settings -> Security -> Encryption &
@@ -145,12 +146,66 @@ def compile_nsc(aapt2, xml, work):
         return z.read(NSC)
 
 
+# ---- server address inside libSGF.so ----------------------------------------------------------
+# The game's code in libSGF.so is encrypted, but its strings are not, so they can be replaced in
+# place: same position, a new text that is not longer, the rest filled with zero bytes.
+#   https://%s.com/   the game server ("%s" is filled in at runtime, e.g. gameserver.yw-p);
+#                     15 characters at most, e.g. https://ab.de/ or http://ab.de/ (port 80 / 443)
+#   https://pf-api-dev.uniplay.jp/api/v1/{active,create_gdkey}?apkey=   the account server; room for
+#                     a base of up to 29 characters incl. a port, e.g. http://192.168.1.50:8080
+GAME_FMT = b"https://%s.com/"
+ACCOUNT_HOST = b"https://pf-api-dev.uniplay.jp"
+ACCOUNT_PATHS = [b"/api/v1/active?apkey=", b"/api/v1/create_gdkey?apkey="]
+
+
+def replace_cstring(data, old, new, what):
+    """Replaces the zero-terminated string `old` (must occur exactly once) by `new`, zero-padded."""
+    if len(new) > len(old):
+        sys.exit(f"{what}: '{new.decode()}' is {len(new)} characters, at most {len(old)} fit in the game")
+    hits, i = [], data.find(old + b"\0")
+    while i >= 0:
+        if i == 0 or data[i - 1] == 0:  # a whole string, not the end of a longer one
+            hits.append(i)
+        i = data.find(old + b"\0", i + 1)
+    if len(hits) != 1:
+        sys.exit(f"{what}: expected the string {old!r} once in libSGF.so, found it {len(hits)} times (other game version?)")
+    i = hits[0]
+    return data[:i] + new + b"\0" * (len(old) - len(new)) + data[i + len(old):], i
+
+
+def patch_server_strings(lib, game_url, account_url):
+    if game_url:
+        g = game_url.encode("ascii")
+        if not g.startswith((b"http://", b"https://")) or not g.endswith(b"/"):
+            sys.exit("--game-url must look like http://host/ or https://host/ (with the final /)")
+        lib, at = replace_cstring(lib, GAME_FMT, g, "--game-url")
+        print(f"libSGF.so @0x{at:x}: {GAME_FMT.decode()} -> {game_url}")
+    if account_url:
+        base = account_url.rstrip("/").encode("ascii")
+        for path in ACCOUNT_PATHS:
+            lib, at = replace_cstring(lib, ACCOUNT_HOST + path, base + path, "--account-url")
+            print(f"libSGF.so @0x{at:x}: {(ACCOUNT_HOST + path).decode()} -> {(base + path).decode()}")
+    return lib
+
+
 def replace_entry(src, dst, name, data):
     with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, "w") as zout:
         for i in zin.infolist():
             if i.filename.startswith("META-INF/") and i.filename.endswith((".SF", ".RSA", ".EC", ".DSA")) or i.filename == "META-INF/MANIFEST.MF":
                 continue  # old v1 signature
             body = data if i.filename == name else zin.read(i)
+            zi = zipfile.ZipInfo(i.filename, date_time=i.date_time)
+            zi.compress_type, zi.external_attr = i.compress_type, i.external_attr
+            zout.writestr(zi, body)
+
+
+def replace_entries(src, dst, changes):
+    """Copies an APK, replacing the entries in `changes` (same compression: native libraries stay stored)."""
+    with zipfile.ZipFile(src) as zin, zipfile.ZipFile(dst, "w") as zout:
+        for i in zin.infolist():
+            if i.filename.startswith("META-INF/") and i.filename.endswith((".SF", ".RSA", ".EC", ".DSA")) or i.filename == "META-INF/MANIFEST.MF":
+                continue  # old v1 signature
+            body = changes.get(i.filename) if i.filename in changes else zin.read(i)
             zi = zipfile.ZipInfo(i.filename, date_time=i.date_time)
             zi.compress_type, zi.external_attr = i.compress_type, i.external_attr
             zout.writestr(zi, body)
@@ -165,6 +220,8 @@ def main():
     ap.add_argument("--keystore", help="your own keystore (default: uber-apk-signer's debug key)")
     ap.add_argument("--ks-alias")
     ap.add_argument("--ks-pass")
+    ap.add_argument("--game-url", help="replace the game server address in libSGF.so (at most 15 characters, e.g. https://ab.de/)")
+    ap.add_argument("--account-url", help="replace the account server address in libSGF.so (at most 29 characters, e.g. http://192.168.1.50:8080)")
     a = ap.parse_args()
     work = tempfile.mkdtemp(prefix="puniapk_")
     try:
@@ -193,11 +250,24 @@ def main():
         data = compile_nsc(aapt2, xml, os.path.join(work, "nsc"))
         unsigned = os.path.join(work, "unsigned")
         os.makedirs(unsigned)
+        lib_apk = lib_name = lib_data = None
+        if a.game_url or a.account_url:
+            for f in apks:
+                with zipfile.ZipFile(os.path.join(src, f)) as z:
+                    names = [n for n in z.namelist() if n.endswith("/libSGF.so")]
+                    if names:
+                        lib_apk, lib_name = f, names[0]
+                        lib_data = patch_server_strings(z.read(names[0]), a.game_url, a.account_url)
+                        break
+            if lib_data is None:
+                sys.exit("libSGF.so not found in the APKs")
         for f in apks:
+            changes = {}
             if f == base:
-                replace_entry(os.path.join(src, f), os.path.join(unsigned, f), NSC, data)
-            else:
-                replace_entry(os.path.join(src, f), os.path.join(unsigned, f), None, None)
+                changes[NSC] = data
+            if f == lib_apk:
+                changes[lib_name] = lib_data
+            replace_entries(os.path.join(src, f), os.path.join(unsigned, f), changes)
         signer = a.signer or fetch(SIGNER, "uber-apk-signer.jar")
         cmd = ["java", "-jar", signer, "-a", unsigned, "-o", a.out, "--allowResign"]
         if a.keystore:
