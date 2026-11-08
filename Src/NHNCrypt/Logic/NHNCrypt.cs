@@ -36,6 +36,31 @@ namespace Puniemu.Src.NHNCrypt.Logic
             var encrypted = aes.EncryptEcb(encryptionInput.ToArray(), PaddingMode.PKCS7);
             return Convert.ToBase64String(encrypted).Replace('+', '-').Replace('/', '_');
         }
+        // Client side (talking to the official server, Tools/GameDataFetcher): a request is
+        // digest(json) + json, AES-ECB, URL-safe base64; an answer is AES-ECB of digest + gzip(json).
+        public static string EncryptRequest(string json)
+        {
+            var body = Encoding.UTF8.GetBytes(json);
+            var digest = CalcDigest(body);
+            var aes = Aes.Create();
+            aes.Key = NHN_KEY;
+            var encrypted = aes.EncryptEcb(digest.Concat(body).ToArray(), PaddingMode.PKCS7);
+            return Convert.ToBase64String(encrypted).Replace('+', '-').Replace('/', '_');
+        }
+
+        public static string DecryptResponse(string content)
+        {
+            var t = content.Trim().Replace('-', '+').Replace('_', '/');
+            t += new string('=', (4 - t.Length % 4) % 4);
+            var aes = Aes.Create();
+            aes.Key = NHN_KEY;
+            var plain = aes.DecryptEcb(Convert.FromBase64String(t), PaddingMode.PKCS7).Skip(20).ToArray();
+            using var gz = new GZipStream(new MemoryStream(plain), CompressionMode.Decompress);
+            using var outMs = new MemoryStream();
+            gz.CopyTo(outMs);
+            return Encoding.UTF8.GetString(outMs.ToArray());
+        }
+
         private static byte[] GzipCompress(byte[] input)
         {
             using (var result = new MemoryStream())

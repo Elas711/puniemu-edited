@@ -75,6 +75,12 @@ class Program
 {
     static void Main(string[] args)
     {
+        // Puniemu --fetch-game-data [...]: download the game data from the official servers and exit
+        if (args.Contains("--fetch-game-data"))
+        {
+            Environment.Exit(GameDataFetcher.RunAsync(args).GetAwaiter().GetResult());
+            return;
+        }
         var builder = WebApplication.CreateBuilder(args);
         // Hosting platforms such as Render, Railway, Fly.io or Heroku pass the port in $PORT
         var platformPort = Environment.GetEnvironmentVariable("PORT");

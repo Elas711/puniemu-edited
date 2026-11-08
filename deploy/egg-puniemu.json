@@ -7,7 +7,7 @@
     "exported_at": "2026-11-08T10:16:11+00:00",
     "name": "Puniemu (Yo-kai Watch Puni Puni / Wibble Wobble)",
     "author": "puniemu@example.com",
-    "description": "Private server emulator for Yo-kai Watch Puni Puni (JP 4.177.0) and Wibble Wobble. Built from git at install time; saves in a SQLite file (or PostgreSQL). Upload the game data into Resources/ and dataDownload/ after installing.",
+    "description": "Private server emulator for Yo-kai Watch Puni Puni (JP 4.177.0) and Wibble Wobble. Built from git at install time; saves in a SQLite file (or PostgreSQL). Gets the game data automatically (base data repository + the official servers), or upload your own.",
     "features": null,
     "docker_images": {
         ".NET 8 (parkervcp yolks)": "ghcr.io/parkervcp/yolks:dotnet_8",
@@ -23,7 +23,7 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/bash\n# Puniemu install / update. Builds the server from git into /mnt/server/app.\n# Your files (Resources/, dataDownload/, data/, appsettings.json, Translations/ extras) are kept.\nset -e\ncommand -v git >/dev/null || (apt-get update -qq && apt-get install -y -qq git ca-certificates >/dev/null)\n\nREPO=\"${PUNIEMU_REPO:-https://github.com/Elas711/puniemu-edited.git}\"\nBRANCH=\"${PUNIEMU_BRANCH:-master}\"\nif [ -n \"${GIT_TOKEN}\" ]; then REPO=\"${REPO/https:\\/\\//https:\\/\\/x-access-token:${GIT_TOKEN}@}\"; fi\n\nSRC=/tmp/puniemu-src\nOUT=/tmp/puniemu-out\nrm -rf \"$SRC\" \"$OUT\"\necho \"Cloning ${PUNIEMU_REPO} (${BRANCH})...\"\ngit clone --depth 1 --branch \"${BRANCH}\" \"${REPO}\" \"$SRC\"\n\ncase \"$(uname -m)\" in aarch64|arm64) RID=linux-arm64 ;; *) RID=linux-x64 ;; esac\necho \"Building for ${RID} (self-contained: no .NET runtime needed in the server image)...\"\ncd \"$SRC\"\ndotnet publish Puniemu.csproj -c Release -r \"$RID\" --self-contained true -o \"$OUT\" -p:DebugType=none\n\ncd /mnt/server\nrm -rf app && mkdir -p app && cp -r \"$OUT\"/. app/\nchmod +x app/Puniemu\nmkdir -p Resources dataDownload data Translations Events AssetOverlay Tools\ncp -r \"$SRC\"/Translations/. Translations/        # updated dictionaries; your extra files stay\ncp -rn \"$SRC\"/Events/. Events/ 2>/dev/null || true # keeps your event packs / edits\ncp -r \"$SRC\"/Tools/. Tools/                       # smoke test, data downloader, translation tools\ncp \"$SRC\"/appsettings.example.json appsettings.example.json\n[ -f appsettings.json ] || echo '{}' > appsettings.json\nrm -rf \"$SRC\" \"$OUT\"\n\necho \"\"\necho \"Install complete.\"\necho \"Upload the game's master data (ywp_mst_*.txt ...) into Resources/ and the assets into dataDownload/.\"\necho \"Settings: the egg variables (Startup tab) or appsettings.json. Saves: data/saves.db\"\n",
+            "script": "#!/bin/bash\n# Puniemu install / update. Builds the server from git into /mnt/server/app.\n# Your files (Resources/, dataDownload/, data/, appsettings.json, Translations/ extras) are kept.\nset -e\ncommand -v git >/dev/null || (apt-get update -qq && apt-get install -y -qq git ca-certificates >/dev/null)\n\nREPO=\"${PUNIEMU_REPO:-https://github.com/Elas711/puniemu-edited.git}\"\nBRANCH=\"${PUNIEMU_BRANCH:-master}\"\nif [ -n \"${GIT_TOKEN}\" ]; then REPO=\"${REPO/https:\\/\\//https:\\/\\/x-access-token:${GIT_TOKEN}@}\"; fi\n\nSRC=/tmp/puniemu-src\nOUT=/tmp/puniemu-out\nrm -rf \"$SRC\" \"$OUT\"\necho \"Cloning ${PUNIEMU_REPO} (${BRANCH})...\"\ngit clone --depth 1 --branch \"${BRANCH}\" \"${REPO}\" \"$SRC\"\n\ncase \"$(uname -m)\" in aarch64|arm64) RID=linux-arm64 ;; *) RID=linux-x64 ;; esac\necho \"Building for ${RID} (self-contained: no .NET runtime needed in the server image)...\"\ncd \"$SRC\"\ndotnet publish Puniemu.csproj -c Release -r \"$RID\" --self-contained true -o \"$OUT\" -p:DebugType=none\n\ncd /mnt/server\nrm -rf app && mkdir -p app && cp -r \"$OUT\"/. app/\nchmod +x app/Puniemu\nmkdir -p Resources dataDownload data Translations Events AssetOverlay Tools\ncp -r \"$SRC\"/Translations/. Translations/        # updated dictionaries; your extra files stay\ncp -rn \"$SRC\"/Events/. Events/ 2>/dev/null || true # keeps your event packs / edits\ncp -r \"$SRC\"/Tools/. Tools/                       # smoke test, data downloader, translation tools\ncp \"$SRC\"/appsettings.example.json appsettings.example.json\n[ -f appsettings.json ] || echo '{}' > appsettings.json\nrm -rf \"$SRC\" \"$OUT\"\n\n# ---- game data ----\n# 1. Puniemu's own data files (stage_data, gacha_pool, mission_cfg, ... and a master table set) from\n#    a repository that ships a Resources/ folder. Files you already have are kept.\nif [ -n \"${BASE_DATA_REPO}\" ]; then\n    echo \"Getting the base data (Resources/) from ${BASE_DATA_REPO}...\"\n    rm -rf /tmp/puniemu-base\n    if git clone --depth 1 --filter=blob:none --sparse --branch \"${BASE_DATA_BRANCH:-master}\" \"${BASE_DATA_REPO}\" /tmp/puniemu-base \\\n        && git -C /tmp/puniemu-base sparse-checkout set Resources && [ -d /tmp/puniemu-base/Resources ]; then\n        cp -rn /tmp/puniemu-base/Resources/. Resources/\n        echo \"Base data: $(ls Resources | wc -l) files in Resources/\"\n    else\n        echo \"WARNING: could not get the base data - upload Resources/ yourself.\"\n    fi\n    rm -rf /tmp/puniemu-base\nfi\n# 2. The current master tables (and optionally the assets) from the official servers, the way the\n#    game downloads them. Overwrites the ywp_mst_* tables; Puniemu's own files stay.\nif [ \"${FETCH_GAME_DATA}\" = \"true\" ]; then\n    ASSET_ARGS=\"\"\n    [ \"${FETCH_ASSETS}\" = \"true\" ] && ASSET_ARGS=\"--assets /mnt/server/dataDownload\"\n    ./app/Puniemu --fetch-game-data --version \"${GameVersion:-4.177.0}\" --resources /mnt/server/Resources ${ASSET_ARGS} \\\n        || echo \"WARNING: the official servers did not give the data (wrong GameVersion?). The base data is used.\"\nfi\n\necho \"\"\necho \"Install complete.\"\necho \"Game data is in Resources/ (and dataDownload/ with FETCH_ASSETS=true); you can also upload your own.\"\necho \"Settings: the egg variables (Startup tab) or appsettings.json. Saves: data/saves.db\"\n",
             "container": "mcr.microsoft.com/dotnet/sdk:8.0",
             "entrypoint": "bash"
         }
@@ -57,6 +57,46 @@
             "user_viewable": true,
             "user_editable": true,
             "rules": "nullable|string|max:255",
+            "field_type": "text"
+        },
+        {
+            "name": "Base data repository",
+            "description": "A git repository with a Resources/ folder (Puniemu's stage_data, gacha_pool, mission_cfg ... + master tables). Empty = upload Resources/ yourself.",
+            "env_variable": "BASE_DATA_REPO",
+            "default_value": "https://github.com/Washaaaan/puniemu2.git",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:255",
+            "field_type": "text"
+        },
+        {
+            "name": "Base data branch",
+            "description": "Branch of the base data repository.",
+            "env_variable": "BASE_DATA_BRANCH",
+            "default_value": "master",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:100",
+            "field_type": "text"
+        },
+        {
+            "name": "Download master tables",
+            "description": "true = get the current master tables from the official server at every (re)install (needs the current Game version). Overwrites ywp_mst_* files.",
+            "env_variable": "FETCH_GAME_DATA",
+            "default_value": "true",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Download assets",
+            "description": "true = also download all asset files (~75,000 files, several GB) into dataDownload/. Later reinstalls only fetch new files.",
+            "env_variable": "FETCH_ASSETS",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
             "field_type": "text"
         },
         {
