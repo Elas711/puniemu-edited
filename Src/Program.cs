@@ -109,6 +109,15 @@ class Program
         //Optional English (or other) overlay for the game's master data
         Puniemu.Src.Server.Balance.BalanceManager.Prepare(); // reads skill labels before they are translated
         TranslationManager.Initialize();
+        // Puniemu --export-untranslated <file>: every text still Japanese (the admin panel's
+        // download) for Tools/machine_translate.py, then exit - used by the Pelican install
+        var exportAt = Array.IndexOf(args, "--export-untranslated");
+        if (exportAt >= 0 && exportAt + 1 < args.Length)
+        {
+            File.WriteAllText(args[exportAt + 1], TranslationManager.ExportUntranslatedJson());
+            Console.WriteLine($"{TranslationManager.Untranslated.Count} untranslated texts written to {args[exportAt + 1]}");
+            Environment.Exit(0);
+        }
         Puniemu.Src.Server.Balance.BalanceManager.Initialize(
             // BalanceStrength alone (older configs) means the "stats" mode
             DataManager.Logic.DataManager.BalanceMode.Length > 0 ? DataManager.Logic.DataManager.BalanceMode
