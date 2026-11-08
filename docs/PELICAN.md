@@ -29,20 +29,33 @@ Admin area -> **Servers** -> **Create**:
 | CPU | 100-200 % is plenty |
 
 Leave the variables at their defaults for now. The install starts by itself: the console shows the
-git clone and the build (2-5 minutes) and ends with `Install complete.`
+git clone, the build and the game data download (3-6 minutes, longer with assets) and ends with
+`Install complete.`
 
-## 3. Upload the game data
+## 3. Game data (automatic)
 
-Files tab (or SFTP: the panel shows the address, user and your panel password):
+The install gets it by itself:
 
-* `Resources/` - the master tables (`ywp_mst_*.txt`, `ywp_user_*_def.txt`, `stage_data`...), e.g. from
-  `Tools/dataDownloadDownloader.py` run on your PC.
-* `dataDownload/` - the asset files (folders `<version>/<date>/...`), if this server should serve
-  them.
-* Optional: generated translations (`machine*.json`, `strings.generated.json`) into
-  `Translations/en/`.
+1. **Base data** (`Base data repository`, default `Washaaaan/puniemu2`): Puniemu's own files
+   (`stage_data`, `gacha_pool`, `mission_cfg`, ...) and a set of master tables, copied into
+   `Resources/`. Files you already have there are kept.
+2. **Current master tables** (`Download master tables` = `true`): downloaded from the official
+   server the way the game does it (needs the current `Game version`, 4.177.0 today). This
+   overwrites the `ywp_mst_*` files at every reinstall.
+3. **Assets** (`Download assets` = `true`, off by default): all ~75,000 files (several GB) into
+   `dataDownload/`. A later reinstall only fetches new files. Give the server enough disk first.
 
-Big folders: zip them on your PC, upload the zip and use the file manager's **Unarchive**.
+Tested here: an empty server folder ends up with 331 files in `Resources/` and the smoke test
+passes. If the official server refuses (old `Game version`), the install continues with the base
+data and prints a warning.
+
+You can still upload your own data (Files tab or SFTP): `Resources/` for the master tables,
+`dataDownload/` for assets, generated translations (`machine*.json`) into `Translations/en/`. Big
+folders: upload a zip and use the file manager's **Unarchive**. To keep edited master tables, set
+`Download master tables` to `false`.
+
+The same download works outside the panel:
+`Puniemu --fetch-game-data --version 4.177.0 --resources Resources [--assets dataDownload]`.
 
 ## 4. Settings (Startup tab)
 

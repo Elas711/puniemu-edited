@@ -72,6 +72,11 @@ puniemu-edited/
 └── wwwroot/dataDownload/     ← assets (optional, see "Data download")
 ```
 
+Download the current master tables (and with `--assets` all asset files) from the official servers:
+`dotnet Puniemu.dll --fetch-game-data --version 4.177.0 --resources Resources [--assets wwwroot/dataDownload]`.
+Puniemu's own files (`stage_data`, `gacha_pool`, ...) come from a repository with a `Resources/`
+folder (the Pelican egg takes them from Washaaaan/puniemu2).
+
 `Resources` is read from disk at startup, so you don't have to rebuild the server after changing it
 (it is also still embedded at build time like before).
 
