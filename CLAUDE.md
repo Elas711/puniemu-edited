@@ -41,6 +41,8 @@ Puniemu: C# / .NET 8 (ASP.NET minimal API) server emulator for Yo-kai Watch Puni
 * Data sources / archives: `docs/ARCHIVES.md` (archive.org items, MediaFire packs,
   `Tools/remote_zip.py`, `Tools/mediafire_download.py --direct <link>`); find new sites with
   `python -I Tools/discover_sites.py --out sites_found` (search APIs + polite crawler, no file hosts).
+* Pelican / Pterodactyl: `deploy/egg-puniemu.json` (self-contained build into `app/`, data in
+  `Resources/ dataDownload/ data/`), guide `docs/PELICAN.md`.
 * Client testing without patching: `docs/EMULATOR.md`, `Tools/make_certs.sh`,
   `Tools/patch_apk.py` (network config trusts user CAs, re-sign splits).
 

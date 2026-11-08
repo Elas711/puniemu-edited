@@ -33,6 +33,9 @@ Game data (`Resources`, `dataDownload`) and APKs are **not** part of this reposi
 * The game's server data: a `Resources` folder (master tables) and optionally the `dataDownload`
   folder (assets)
 
+Hosting on a **Pelican / Pterodactyl** panel: import `deploy/egg-puniemu.json` and follow
+[docs/PELICAN.md](docs/PELICAN.md).
+
 ### 1. Database
 
 Nothing to do with the default `"Database": "sqlite"`: all saves go into one file (`SqlitePath`,

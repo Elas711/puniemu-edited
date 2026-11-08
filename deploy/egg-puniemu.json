@@ -1,211 +1,272 @@
 {
-    "_comment": "Pterodactyl/Pelican egg for Puniemu (contributed by eliasderzocker). Clones the source, optionally fetches master data, then builds. Import via Panel > Admin > Nests > Import Egg.",
+    "_comment": "Pelican / Pterodactyl egg for Puniemu. Pelican: Admin -> Eggs -> Import. Pterodactyl: Admin -> Nests -> Import Egg. See docs/PELICAN.md.",
     "meta": {
         "version": "PTDL_v2",
         "update_url": null
     },
-    "exported_at": "2026-08-14T00:00:00+00:00",
-    "name": "Puniemu (Yo-kai Watch Puni Puni)",
+    "exported_at": "2026-11-08T10:16:11+00:00",
+    "name": "Puniemu (Yo-kai Watch Puni Puni / Wibble Wobble)",
     "author": "puniemu@example.com",
-    "description": "Private server emulator for Yo-kai Watch Puni Puni, written in C# / .NET 8. Built from source at install time, with optional live master-data fetch from the real gameserver.",
+    "description": "Private server emulator for Yo-kai Watch Puni Puni (JP 4.177.0) and Wibble Wobble. Built from git at install time; saves in a SQLite file (or PostgreSQL). Upload the game data into Resources/ and dataDownload/ after installing.",
     "features": null,
     "docker_images": {
-        "Custom .NET 8 (Pterodactyl runtime)": "ghcr.io/theelia/puniemu-docker:latest"
+        ".NET 8 (parkervcp yolks)": "ghcr.io/parkervcp/yolks:dotnet_8",
+        "Debian (parkervcp yolks)": "ghcr.io/parkervcp/yolks:debian"
     },
     "file_denylist": [],
-    "startup": "dotnet Puniemu.dll",
+    "startup": "if [ -n \"${HTTPS_CERT}\" ]; then export ASPNETCORE_URLS=\"https://0.0.0.0:{{SERVER_PORT}}\" ASPNETCORE_Kestrel__Certificates__Default__Path=\"${HTTPS_CERT}\" ASPNETCORE_Kestrel__Certificates__Default__Password=\"${HTTPS_CERT_PASSWORD}\"; else export ASPNETCORE_URLS=\"http://0.0.0.0:{{SERVER_PORT}}\"; fi; ./app/Puniemu",
     "config": {
         "files": "{}",
-        "startup": "{\"done\": \"Now listening on\"}",
+        "startup": "{\"done\": \"Application started\"}",
         "logs": "{}",
         "stop": "^C"
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/bash\nset -e\napt-get update && apt-get install -y --no-install-recommends git python3 python3-pip\n\npip3 install --no-cache-dir --break-system-packages aiohttp requests pycryptodomex 2>/dev/null || \\\n    pip3 install --no-cache-dir aiohttp requests pycryptodomex\n\ncd /mnt/server\n\nREPO_URL=\"${PUNIEMU_REPO:-https://github.com/SuperTavor/puniemu.git}\"\nBRANCH=\"${PUNIEMU_BRANCH:-master}\"\n\necho \"Cloning ${REPO_URL} (${BRANCH})...\"\ngit clone --branch \"${BRANCH}\" --depth 1 \"${REPO_URL}\" source\ncd source\n\n# --- Live master-data downloader (talks to the real gameserver.yw-p.com) ---\ncat > sharedLogic.py << 'PYFILE_SHAREDLOGIC'\nimport hashlib\nfrom base64 import urlsafe_b64encode, b64decode\nfrom gzip import decompress\nfrom Cryptodome.Util.Padding import unpad, pad\nfrom Cryptodome.Cipher import AES\n\nclass NHN:\n    KEY = bytes([0xa8, 0x65, 0xd7, 0xe5, 0xe2, 0x45, 0x8f, 0x8c, 0xe1, 0xb5, 0xec, 0xd0, 0x87, 0xe5, 0x45, 0x94])\n    GAMESERVER = \"https://gameserver.yw-p.com/\"\n    headers = {\n        \"Content-Type\": \"application/json\",\n        \"Accept\": \"application/json\",\n        \"Accept-Encoding\": \"identity\",\n        \"Connection\": \"Keep-Alive\",\n        \"User-Agent\": \"Dalvik/2.1.0 (Linux; U; Android 9; SM-G965N Build/QP1A.190711.020)\"\n    }\n\n    @staticmethod\n    def decrypt_res(input_text: str) -> str:\n        input_text = input_text.strip().replace('-', '+').replace('_', '/')\n        input_text += \"==\" if not input_text.endswith(\"==\") else \"\"\n        decrypted = unpad(AES.new(NHN.KEY, AES.MODE_ECB).decrypt(b64decode(input_text)), AES.block_size)[20:]\n        return decompress(decrypted).decode(\"utf-8\")\n\n    @staticmethod\n    def encrypt_req(to_encrypt: str) -> str:\n        to_encrypt_bytes = to_encrypt.encode('utf-8')\n        digest = NHN.calc_digest(to_encrypt_bytes)\n        padded = pad(digest + to_encrypt_bytes, AES.block_size)\n        encrypted = AES.new(NHN.KEY, AES.MODE_ECB).encrypt(padded)\n        return urlsafe_b64encode(encrypted)\n\n    @staticmethod\n    def calc_digest(payload: bytes) -> bytes:\n        SALT = b\"0bk2kvtFE2\"\n        sha1 = hashlib.sha1()\n        sha1.update(SALT + b' ' + payload)\n        digest = sha1.digest()\n        secondSha1 = hashlib.sha1()\n        secondSha1.update(SALT + digest)\n        return secondSha1.digest()\nPYFILE_SHAREDLOGIC\n\ncat > DataDownloader.py << 'PYFILE_DOWNLOADER'\nimport json\nimport os\nimport sys\nimport aiohttp\nimport asyncio\nimport requests\nfrom urllib.parse import urlparse\nfrom sharedLogic import NHN\n\nDL_SRV = \"https://resource.yw-p.com/eal\"\n\n\nasync def download_file(session, data, download_directory, use_game_structure):\n    if use_game_structure:\n        path = data[\"folder\"] + '/' + data['fname']\n    else:\n        path = urlparse(data[\"url\"]).path.lstrip('/')\n    file_path = os.path.join(download_directory, path)\n\n    os.makedirs(os.path.dirname(file_path), exist_ok=True)\n\n    async with session.get(data[\"url\"]) as response:\n        if response.status == 200:\n            with open(file_path, 'wb') as f:\n                f.write(await response.read())\n            print(f\"Downloaded: {file_path}\")\n        else:\n            print(f\"Failed ({response.status}): {data['url']}\")\n\n\nasync def download_files(download_directory, urls, use_game_structure):\n    async with aiohttp.ClientSession() as session:\n        tasks = [download_file(session, url, download_directory, use_game_structure) for url in urls]\n        await asyncio.gather(*tasks)\n\n\ndef get_installation_data(data, url):\n    return [{\"folder\": x[2], \"fname\": x[1], \"url\": f\"{url}/{x[5]}/{x[3]}/{x[1]}\"}\n            for x in [item.split('|') for item in data.split(\"*\")]]\n\n\ndef gather_urls(game_version):\n    data = NHN.encrypt_req(f'''{{\n        \"appVer\": \"{game_version}\",\n        \"deviceId\": \"d-822a61c56b60d03dd373aab9826210e1\",\n        \"level5UserId\": \"0\",\n        \"osType\": 2,\n        \"tableNames\": \"ywp_mst_version_resource\",\n        \"userId\": \"0\",\n        \"ywpToken\": \"0\"\n        }}''')\n    md = requests.post(NHN.GAMESERVER + \"getMaster.nhn\", headers=NHN.headers, data=data).text\n    parsed = json.loads(NHN.decrypt_res(md))[\"ywp_mst_version_resource\"]\n    return get_installation_data(parsed[\"tableData\"], DL_SRV)\n\n\nif __name__ == \"__main__\":\n    # Non-interactive version: reads config from environment variables instead\n    # of input(), so this can run inside an automated (e.g. Pterodactyl/Pelican\n    # egg) install step.\n    #\n    #   PUNIEMU_GAME_VERSION      required - the game version to request master\n    #                             data for (e.g. \"40030\")\n    #   PUNIEMU_RESOURCES_DIR     optional - where to write the files, default\n    #                             \"Resources\" (relative to the current directory,\n    #                             which should be the puniemu checkout root so\n    #                             the files land next to Puniemu.csproj)\n    #   PUNIEMU_USE_GAME_STRUCTURE  optional - \"true\"/\"y\" to use the game's own\n    #                             folder/filename layout instead of the URL path,\n    #                             default \"false\"\n\n    game_version = os.environ.get(\"PUNIEMU_GAME_VERSION\", \"\").strip()\n    if not game_version:\n        print(\"PUNIEMU_GAME_VERSION is not set - cannot query master data without a game version.\", file=sys.stderr)\n        sys.exit(1)\n\n    download_directory = os.environ.get(\"PUNIEMU_RESOURCES_DIR\", \"Resources\").strip()\n    use_game_structure = os.environ.get(\"PUNIEMU_USE_GAME_STRUCTURE\", \"false\").strip().lower() in (\"1\", \"true\", \"y\", \"yes\")\n\n    print(f\"Fetching master data for version {game_version} into '{download_directory}' (game structure: {use_game_structure})\")\n    asyncio.run(download_files(download_directory, gather_urls(game_version), use_game_structure))\n    print(\"Done.\")\nPYFILE_DOWNLOADER\n\nFETCH_LIVE_DATA=\"${PUNIEMU_FETCH_LIVE_DATA:-true}\"\nif [ \"${FETCH_LIVE_DATA,,}\" = \"true\" ] || [ \"${FETCH_LIVE_DATA,,}\" = \"1\" ] || [ \"${FETCH_LIVE_DATA,,}\" = \"y\" ]; then\n    if [ -z \"${PUNIEMU_GAME_VERSION}\" ]; then\n        echo \"PUNIEMU_FETCH_LIVE_DATA is enabled but PUNIEMU_GAME_VERSION is empty - set it in the server's egg variables.\" >&2\n        exit 1\n    fi\n    echo \"Fetching live master data for game version ${PUNIEMU_GAME_VERSION}...\"\n    PUNIEMU_GAME_VERSION=\"${PUNIEMU_GAME_VERSION}\" \\\n    PUNIEMU_RESOURCES_DIR=\"Resources\" \\\n    PUNIEMU_USE_GAME_STRUCTURE=\"${PUNIEMU_USE_GAME_STRUCTURE:-false}\" \\\n    python3 DataDownloader.py\n\n    # Puniemu.csproj only embeds \"Resources\\*.txt\" (non-recursive), but the\n    # downloader writes files into subfolders (URL-path or game-structure\n    # layout). Flatten everything one level up so it actually gets embedded.\n    echo \"Flattening downloaded resources into Resources/ so they match the non-recursive EmbeddedResource glob...\"\n    find Resources -mindepth 2 -type f -name '*.txt' -exec mv -n {} Resources/ \\;\n    find Resources -mindepth 1 -type d -empty -delete\nelse\n    echo \"Skipping live master-data download (PUNIEMU_FETCH_LIVE_DATA is not true). Assuming Resources/ is already populated by the repo.\"\nfi\n\necho \"Restoring and publishing...\"\ndotnet restore Puniemu.csproj\ndotnet publish Puniemu.csproj -c Release -o /mnt/server\n\necho \"Install complete. Built files are in /mnt/server (mounted as /home/container at runtime).\"\n",
+            "script": "#!/bin/bash\n# Puniemu install / update. Builds the server from git into /mnt/server/app.\n# Your files (Resources/, dataDownload/, data/, appsettings.json, Translations/ extras) are kept.\nset -e\ncommand -v git >/dev/null || (apt-get update -qq && apt-get install -y -qq git ca-certificates >/dev/null)\n\nREPO=\"${PUNIEMU_REPO:-https://github.com/Elas711/puniemu-edited.git}\"\nBRANCH=\"${PUNIEMU_BRANCH:-master}\"\nif [ -n \"${GIT_TOKEN}\" ]; then REPO=\"${REPO/https:\\/\\//https:\\/\\/x-access-token:${GIT_TOKEN}@}\"; fi\n\nSRC=/tmp/puniemu-src\nOUT=/tmp/puniemu-out\nrm -rf \"$SRC\" \"$OUT\"\necho \"Cloning ${PUNIEMU_REPO} (${BRANCH})...\"\ngit clone --depth 1 --branch \"${BRANCH}\" \"${REPO}\" \"$SRC\"\n\ncase \"$(uname -m)\" in aarch64|arm64) RID=linux-arm64 ;; *) RID=linux-x64 ;; esac\necho \"Building for ${RID} (self-contained: no .NET runtime needed in the server image)...\"\ncd \"$SRC\"\ndotnet publish Puniemu.csproj -c Release -r \"$RID\" --self-contained true -o \"$OUT\" -p:DebugType=none\n\ncd /mnt/server\nrm -rf app && mkdir -p app && cp -r \"$OUT\"/. app/\nchmod +x app/Puniemu\nmkdir -p Resources dataDownload data Translations Events AssetOverlay Tools\ncp -r \"$SRC\"/Translations/. Translations/        # updated dictionaries; your extra files stay\ncp -rn \"$SRC\"/Events/. Events/ 2>/dev/null || true # keeps your event packs / edits\ncp -r \"$SRC\"/Tools/. Tools/                       # smoke test, data downloader, translation tools\ncp \"$SRC\"/appsettings.example.json appsettings.example.json\n[ -f appsettings.json ] || echo '{}' > appsettings.json\nrm -rf \"$SRC\" \"$OUT\"\n\necho \"\"\necho \"Install complete.\"\necho \"Upload the game's master data (ywp_mst_*.txt ...) into Resources/ and the assets into dataDownload/.\"\necho \"Settings: the egg variables (Startup tab) or appsettings.json. Saves: data/saves.db\"\n",
             "container": "mcr.microsoft.com/dotnet/sdk:8.0",
             "entrypoint": "bash"
         }
     },
     "variables": [
         {
-            "name": "Puniemu Git Repository",
-            "description": "Git URL to clone and build at install time.",
+            "name": "Git repository",
+            "description": "Repository the server is built from (Reinstall to update).",
             "env_variable": "PUNIEMU_REPO",
             "default_value": "https://github.com/Elas711/puniemu-edited.git",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|string",
+            "rules": "required|string|max:255",
             "field_type": "text"
         },
         {
-            "name": "Puniemu Git Branch",
-            "description": "Branch or tag to build.",
+            "name": "Git branch",
+            "description": "Branch or tag to build. Use master once the work is merged there.",
             "env_variable": "PUNIEMU_BRANCH",
-            "default_value": "master",
+            "default_value": "ccr-00a9cf0a-1hujzi",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|string",
+            "rules": "required|string|max:100",
             "field_type": "text"
         },
         {
-            "name": "Fetch Live Master Data",
-            "description": "If true, downloads current master data (items, Yo-kai, gacha, stages, ...) from the real gameserver at install time instead of relying on a static snapshot in the repo. The official servers are offline, so this only works against a mirror; leave false and upload Resources/ yourself.",
-            "env_variable": "PUNIEMU_FETCH_LIVE_DATA",
-            "default_value": "false",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string|in:true,false",
-            "field_type": "text"
-        },
-        {
-            "name": "Game Version",
-            "description": "Game version string, used both for the live master-data download and as the app's own GameVersion setting (so InitHandler's version check matches without patching source).",
-            "env_variable": "PUNIEMU_GAME_VERSION",
+            "name": "Git token (private repos only)",
+            "description": "GitHub token for a private repository. Leave empty for public ones.",
+            "env_variable": "GIT_TOKEN",
             "default_value": "",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|string",
+            "rules": "nullable|string|max:255",
             "field_type": "text"
         },
         {
-            "name": "Use Game File Structure",
-            "description": "If true, saves downloaded resources using the game's own folder/filename layout instead of the URL path.",
-            "env_variable": "PUNIEMU_USE_GAME_STRUCTURE",
-            "default_value": "false",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string|in:true,false",
-            "field_type": "text"
-        },
-        {
-            "name": "Postgres Host",
-            "description": "Hostname or IP of your Postgres server.",
-            "env_variable": "PUNIEMU_DB_HOST",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Postgres Port",
-            "description": "Port of your Postgres server.",
-            "env_variable": "PUNIEMU_DB_PORT",
-            "default_value": "5432",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Postgres Database Name",
-            "description": "Name of the database Puniemu should use.",
-            "env_variable": "PUNIEMU_DB_NAME",
-            "default_value": "puniemu",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Postgres Username",
-            "description": "Postgres user Puniemu connects as.",
-            "env_variable": "PUNIEMU_DB_USER",
-            "default_value": "puniemu",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Postgres Password",
-            "description": "Password for the Postgres user.",
-            "env_variable": "PUNIEMU_DB_PASSWORD",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Server Name",
-            "description": "Display name for the server (Puniemu's ServerName setting).",
-            "env_variable": "PUNIEMU_SERVER_NAME",
+            "name": "Server name",
+            "description": "Shown in the game's dialogs and the web pages.",
+            "env_variable": "ServerName",
             "default_value": "Puniemu",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "required|string",
+            "rules": "required|string|max:64",
             "field_type": "text"
         },
         {
-            "name": "Max Connections",
-            "description": "Puniemu's MaxConnections setting.",
-            "env_variable": "PUNIEMU_MAX_CONNECTIONS",
-            "default_value": "1500",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|numeric",
-            "field_type": "text"
-        },
-        {
-            "name": "Max Cached Accounts",
-            "description": "Puniemu's MaxCachedAccounts setting.",
-            "env_variable": "PUNIEMU_MAX_CACHED_ACCOUNTS",
-            "default_value": "2000",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|numeric",
-            "field_type": "text"
-        },
-        {
-            "name": "Supabase Key (optional)",
-            "description": "Only needed if you use Supabase instead of Postgres. Leave empty otherwise.",
-            "env_variable": "PUNIEMU_SUPABASE_KEY",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Supabase URL (optional)",
-            "description": "Only needed if you use Supabase instead of Postgres. Leave empty otherwise.",
-            "env_variable": "PUNIEMU_SUPABASE_URL",
-            "default_value": "",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "nullable|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Admin Token",
-            "description": "Enables the admin panel at /admin. Use a long random string.",
+            "name": "Admin token",
+            "description": "Password for the admin panel at /admin. Use a long random string; empty = admin panel off.",
             "env_variable": "AdminToken",
             "default_value": "",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "nullable|string",
+            "rules": "nullable|string|max:200",
+            "field_type": "text"
+        },
+        {
+            "name": "Game",
+            "description": "false = Puni Puni (JP), true = Wibble Wobble.",
+            "env_variable": "IsWibWob",
+            "default_value": "false",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:true,false",
+            "field_type": "text"
+        },
+        {
+            "name": "Game version",
+            "description": "Client version the server accepts.",
+            "env_variable": "GameVersion",
+            "default_value": "4.177.0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:20",
             "field_type": "text"
         },
         {
             "name": "Language",
-            "description": "\"en\" translates the game data with the dictionaries in Translations/en.",
+            "description": "en = English overlay from Translations/en, empty = original Japanese.",
             "env_variable": "Language",
-            "default_value": "",
+            "default_value": "en",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "nullable|string",
+            "rules": "nullable|string|max:10",
             "field_type": "text"
         },
         {
-            "name": "Public Server URL",
-            "description": "Public base URL of the server, e.g. https://puni.example.com",
+            "name": "Public server URL",
+            "description": "Address players reach the server at, e.g. https://gameserver.yw-p.com (emulator setup) or http://your-ip:port.",
             "env_variable": "PublicServerURL",
             "default_value": "",
             "user_viewable": true,
             "user_editable": true,
-            "rules": "nullable|string",
+            "rules": "nullable|string|max:255",
+            "field_type": "text"
+        },
+        {
+            "name": "Database",
+            "description": "sqlite = saves in data/saves.db (nothing to set up), postgres = PostgreSQL (fill in the connection string).",
+            "env_variable": "Database",
+            "default_value": "sqlite",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:sqlite,postgres",
+            "field_type": "text"
+        },
+        {
+            "name": "PostgreSQL connection string",
+            "description": "Only with Database = postgres, e.g. Host=db.example;Port=5432;Database=puniemu;Username=puniemu;Password=...",
+            "env_variable": "PostgresConnectionString",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:500",
+            "field_type": "text"
+        },
+        {
+            "name": "Balance mode",
+            "description": "off, rerank (new ranks for old Yo-kai) or stats.",
+            "env_variable": "BalanceMode",
+            "default_value": "off",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:off,rerank,stats",
+            "field_type": "text"
+        },
+        {
+            "name": "Balance strength",
+            "description": "0 to 1: how strongly old Yo-kai are raised.",
+            "env_variable": "BalanceStrength",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric|between:0,1",
+            "field_type": "text"
+        },
+        {
+            "name": "Anti-cheat mode",
+            "description": "off, log (admin -> Logs) or enforce (reject impossible results).",
+            "env_variable": "AntiCheatMode",
+            "default_value": "log",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|in:off,log,enforce",
+            "field_type": "text"
+        },
+        {
+            "name": "HTTPS certificate (.pfx)",
+            "description": "Optional: path of a .pfx certificate (e.g. certs/server.pfx from Tools/make_certs.sh). Empty = plain HTTP.",
+            "env_variable": "HTTPS_CERT",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:255",
+            "field_type": "text"
+        },
+        {
+            "name": "HTTPS certificate password",
+            "description": "Password of the .pfx file.",
+            "env_variable": "HTTPS_CERT_PASSWORD",
+            "default_value": "puniemu",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:100",
+            "field_type": "text"
+        },
+        {
+            "name": "Master data folder",
+            "description": "Upload the game's master tables here.",
+            "env_variable": "PUNIEMU_RESOURCES_PATH",
+            "default_value": "/home/container/Resources",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Data download folder",
+            "description": "Game assets served to the client.",
+            "env_variable": "DataDownloadPath",
+            "default_value": "/home/container/dataDownload",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "SQLite file",
+            "description": "Player saves (Database = sqlite).",
+            "env_variable": "SqlitePath",
+            "default_value": "/home/container/data/saves.db",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Server state file",
+            "description": "Admin panel settings, gifts, bans, secret words.",
+            "env_variable": "ServerStatePath",
+            "default_value": "/home/container/data/server_state.json",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Translations folder",
+            "description": "Dictionaries; add generated machine*.json here.",
+            "env_variable": "TranslationsPath",
+            "default_value": "/home/container/Translations",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Events folder",
+            "description": "Event packs and history.json.",
+            "env_variable": "EventsPath",
+            "default_value": "/home/container/Events",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Asset overlay folder",
+            "description": "Replacement asset files.",
+            "env_variable": "AssetOverlayPath",
+            "default_value": "/home/container/AssetOverlay",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Web folder",
+            "description": "In-game web page files (part of the build).",
+            "env_variable": "WebPath",
+            "default_value": "/home/container/app/Web",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
             "field_type": "text"
         }
     ]
